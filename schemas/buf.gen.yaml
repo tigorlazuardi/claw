@@ -1,0 +1,27 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/tigorlazuardi/claw
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: ../lib/claw/gen/proto
+    opt:
+      - paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: ../server/gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/bufbuild/validate-go
+    out: ../lib/claw/gen/proto
+    opt:
+      - paths=source_relative
+  - remote: buf.build/protocolbuffers/es
+    out: ../ui/src/gen
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es
+    out: ../ui/src/gen
+    opt:
+      - target=ts
