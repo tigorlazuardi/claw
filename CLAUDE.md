@@ -173,3 +173,10 @@ go run ./cmd/goose
 - Do not self promote in git commits
 - Git commit style should use conventional commit with scope
 - When creating git commits, you are allowed to run multiple git adds and git commits so the changes are atomic.
+
+## Database Field Naming Conventions
+
+- When creating fields for database and migrations use the following rules:
+  1. Timestamp related fields must have suffix `_at` and uses INTEGER value. The actual value is Unix milliseconds from epoch.
+  2. Duration related fields must have suffix `_dur` and uses INTEGER value. The maximum precision value is milliseconds, so the database value is always using milliseconds going in and out.
+  3. For boolean kind of field, field must have `is_` prefix and uses INTEGER value.
