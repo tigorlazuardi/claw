@@ -167,3 +167,9 @@ go run ./cmd/goose
 
 - library documentation for `urfave/cli/v3` is located at https://cli.urfave.org/v3/getting-started. Refer to use them when creating cli commands.
 - documentation for mapping flags to env for urfave/cli/v3 is at https://cli.urfave.org/v3/examples/flags/value-sources/
+
+## Best Practices and Guidelines
+
+- Do not self promote in git commits
+- Git commit style should use conventional commit with scope
+- When creating git commits, you are allowed to run multiple git adds and git commits so the changes are atomic.
