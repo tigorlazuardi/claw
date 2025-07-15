@@ -6,6 +6,10 @@
 # Downloaded proto validate files
 /schemas/buf/validate/
 
+# Artifacts folder (development files)
+/artifacts/
+!/artifacts/.gitkeep
+
 # Direnv
 .direnv/
 .envrc.cache

@@ -66,6 +66,13 @@
                 echo "Proto validate files copied to schemas/buf/validate"
               fi
               
+              # Create artifacts directory if it doesn't exist
+              mkdir -p artifacts
+              
+              export GOOSE_DBSTRING="artifacts/dev.db"
+              echo "GOOSE_DBSTRING set to: $GOOSE_DBSTRING"
+              echo ""
+              
               echo "Run 'go mod tidy' to initialize dependencies"
             '';
           };

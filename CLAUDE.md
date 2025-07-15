@@ -38,6 +38,9 @@ golangci-lint run
 
 # Run the main application (once main.go is created)
 go run main.go
+
+# Run database migrations
+go run ./cmd/goose
 ```
 
 ## Architecture Notes
@@ -159,3 +162,8 @@ go run main.go
 - `lib/claw` contains implementations of APIs.
 - `server` contains server codes (e.g. Routers and Handlers).
 - `worker` contains worker codes.
+
+## Library References
+
+- library documentation for `urfave/cli/v3` is located at https://cli.urfave.org/v3/getting-started. Refer to use them when creating cli commands.
+- documentation for mapping flags to env for urfave/cli/v3 is at https://cli.urfave.org/v3/examples/flags/value-sources/
