@@ -6,7 +6,7 @@
   };
 
   outputs =
-    { nixpkgs }:
+    { nixpkgs, ... }:
     let
       supportedSystems = [
         "x86_64-linux"
@@ -16,13 +16,13 @@
       ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 
-      protocGenValidate =
+      protoValidate =
         pkgs:
         pkgs.fetchFromGitHub {
           owner = "bufbuild";
-          repo = "protoc-gen-validate";
-          rev = "v1.0.4";
-          sha256 = "sha256-NPjBVd5Ch8h2+48uymMRjjY6nepmGiY8z9Kwt+wN4lI=";
+          repo = "protovalidate";
+          rev = "v1.0.0-rc.5";
+          sha256 = "sha256-PTwK8+nMt7fbDrJtDj6vc/0qq8JyX1pqrtMyHnTfJ7s=";
         };
     in
     {
@@ -30,7 +30,7 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          validateProtos = protocGenValidate pkgs;
+          validateProtos = protoValidate pkgs;
         in
         {
           default = pkgs.mkShell {
@@ -77,7 +77,7 @@
               if [ ! -d "schemas/buf/validate" ]; then
                 echo "Setting up proto validate files..."
                 mkdir -p schemas/buf/validate
-                cp -r ${validateProtos}/validate/*.proto schemas/buf/validate/
+                cp -r ${validateProtos}/proto/protovalidate/buf/validate/*.proto schemas/buf/validate/
                 echo "Proto validate files copied to schemas/buf/validate"
               fi
 
@@ -95,4 +95,3 @@
       );
     };
 }
-

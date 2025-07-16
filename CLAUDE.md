@@ -43,6 +43,10 @@ go run main.go
 go run ./cmd/goose
 ```
 
+## Build Commands
+
+- You may use `go build -o artifacts/claw ./cmd/claw/main.go` to test builds
+
 ## Architecture Notes
 
 - The project is a Client-Server architecture
@@ -185,3 +189,7 @@ go run ./cmd/goose
 
 - When dealing with protobuf dependencies, assume all dependencies are available locally.
 
+## Protobuf Conventions
+
+- When dealing with protobuf schemas, follow the conventions that buf.build recommends. Run `buf lint` to ensure no warnings or errors occurs.
+- When dealing with probouf schemas, you are allowed to run `buf generate` on `schemas` folder to validate the output or whenever it feels it's required to do so.
