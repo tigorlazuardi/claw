@@ -170,7 +170,7 @@ go run ./cmd/goose
 
 ## Best Practices and Guidelines
 
-- Do not self promote in git commits
+- CLAUDE MUST NOT self promote in git commits
 - Git commit style should use conventional commit with scope
 - When creating git commits, you are allowed to run multiple git adds and git commits so the changes are atomic.
 
@@ -184,3 +184,4 @@ go run ./cmd/goose
 ## Dependencies
 
 - When dealing with protobuf dependencies, assume all dependencies are available locally.
+
