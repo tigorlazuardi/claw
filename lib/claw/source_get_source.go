@@ -5,31 +5,31 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/go-jet/jet/v2/sqlite"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
-	"github.com/go-jet/jet/v2/sqlite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetSource retrieves a source by ID
-func (s *SourceService) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*clawv1.GetSourceResponse, error) {
+func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*clawv1.GetSourceResponse, error) {
 	// Get source
 	sourceStmt := sqlite.SELECT(table.Sources.AllColumns).
 		FROM(table.Sources).
 		WHERE(table.Sources.ID.EQ(sqlite.Int64(req.Id)))
 
 	var sourceRow struct {
-		ID          int64             `sql:"primary_key"`
-		Kind        string            
-		Slug        string            
-		DisplayName string            
-		Parameter   string            
-		Countback   int32             
-		IsDisabled  types.Bool        
-		LastRunAt   *types.UnixMilli  
-		CreatedAt   types.UnixMilli   
-		UpdatedAt   types.UnixMilli   
+		ID          int64 `sql:"primary_key"`
+		Kind        string
+		Slug        string
+		DisplayName string
+		Parameter   string
+		Countback   int32
+		IsDisabled  types.Bool
+		LastRunAt   *types.UnixMilli
+		CreatedAt   types.UnixMilli
+		UpdatedAt   types.UnixMilli
 	}
 
 	err := sourceStmt.QueryContext(ctx, s.db, &sourceRow)
@@ -68,11 +68,11 @@ func (s *SourceService) GetSource(ctx context.Context, req *clawv1.GetSourceRequ
 			WHERE(table.Schedules.SourceID.EQ(sqlite.Int64(req.Id)))
 
 		var scheduleRows []struct {
-			ID        int64            `sql:"primary_key"`
-			SourceID  int64            
-			Schedule  string           
-			CreatedAt types.UnixMilli  
-			UpdatedAt types.UnixMilli  
+			ID        int64 `sql:"primary_key"`
+			SourceID  int64
+			Schedule  string
+			CreatedAt types.UnixMilli
+			UpdatedAt types.UnixMilli
 		}
 
 		err = schedulesStmt.QueryContext(ctx, s.db, &scheduleRows)
@@ -93,3 +93,4 @@ func (s *SourceService) GetSource(ctx context.Context, req *clawv1.GetSourceRequ
 
 	return response, nil
 }
+

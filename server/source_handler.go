@@ -11,11 +11,11 @@ import (
 
 // SourceHandler implements the ConnectRPC SourceService interface
 type SourceHandler struct {
-	service *claw.SourceService
+	service *claw.Claw
 }
 
 // NewSourceHandler creates a new SourceHandler
-func NewSourceHandler(service *claw.SourceService) *SourceHandler {
+func NewSourceHandler(service *claw.Claw) *SourceHandler {
 	return &SourceHandler{service: service}
 }
 
@@ -66,3 +66,4 @@ func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[cl
 
 // Ensure SourceHandler implements the SourceServiceHandler interface
 var _ clawv1connect.SourceServiceHandler = (*SourceHandler)(nil)
+

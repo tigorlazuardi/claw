@@ -11,7 +11,7 @@ import (
 )
 
 // CreateSource creates a new source with optional schedules
-func (s *SourceService) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest) (*clawv1.CreateSourceResponse, error) {
+func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest) (*clawv1.CreateSourceResponse, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)

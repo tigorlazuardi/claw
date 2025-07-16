@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-jet/jet/v2/sqlite"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
-	"github.com/go-jet/jet/v2/sqlite"
 )
 
 // UpdateSource updates an existing source
-func (s *SourceService) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest) (*clawv1.UpdateSourceResponse, error) {
+func (s *Claw) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest) (*clawv1.UpdateSourceResponse, error) {
 	nowMillis := types.UnixMilliNow()
 
 	// Build dynamic update statement
@@ -66,3 +66,4 @@ func (s *SourceService) UpdateSource(ctx context.Context, req *clawv1.UpdateSour
 
 	return &clawv1.UpdateSourceResponse{Source: getResp.Source}, nil
 }
+

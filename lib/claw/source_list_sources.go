@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/go-jet/jet/v2/sqlite"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
-	"github.com/go-jet/jet/v2/sqlite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ListSources lists sources with optional filtering and cursor-based pagination
-func (s *SourceService) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) (*clawv1.ListSourcesResponse, error) {
+func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) (*clawv1.ListSourcesResponse, error) {
 	// Build query with optional filters
 	query := sqlite.SELECT(table.Sources.AllColumns).FROM(table.Sources)
 
@@ -37,16 +37,16 @@ func (s *SourceService) ListSources(ctx context.Context, req *clawv1.ListSources
 	query = query.ORDER_BY(table.Sources.ID.ASC()).LIMIT(int64(req.PageSize + 1))
 
 	var sourceRows []struct {
-		ID          int64             `sql:"primary_key"`
-		Kind        string            
-		Slug        string            
-		DisplayName string            
-		Parameter   string            
-		Countback   int32             
-		IsDisabled  types.Bool        
-		LastRunAt   *types.UnixMilli  
-		CreatedAt   types.UnixMilli   
-		UpdatedAt   types.UnixMilli   
+		ID          int64 `sql:"primary_key"`
+		Kind        string
+		Slug        string
+		DisplayName string
+		Parameter   string
+		Countback   int32
+		IsDisabled  types.Bool
+		LastRunAt   *types.UnixMilli
+		CreatedAt   types.UnixMilli
+		UpdatedAt   types.UnixMilli
 	}
 
 	err := query.QueryContext(ctx, s.db, &sourceRows)
@@ -95,11 +95,11 @@ func (s *SourceService) ListSources(ctx context.Context, req *clawv1.ListSources
 				WHERE(table.Schedules.SourceID.EQ(sqlite.Int64(row.ID)))
 
 			var scheduleRows []struct {
-				ID        int64            `sql:"primary_key"`
-				SourceID  int64            
-				Schedule  string           
-				CreatedAt types.UnixMilli  
-				UpdatedAt types.UnixMilli  
+				ID        int64 `sql:"primary_key"`
+				SourceID  int64
+				Schedule  string
+				CreatedAt types.UnixMilli
+				UpdatedAt types.UnixMilli
 			}
 
 			err = schedulesStmt.QueryContext(ctx, s.db, &scheduleRows)
@@ -129,3 +129,4 @@ func (s *SourceService) ListSources(ctx context.Context, req *clawv1.ListSources
 
 	return response, nil
 }
+
