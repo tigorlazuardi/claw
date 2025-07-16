@@ -25,14 +25,17 @@ message SourceData {
   // Number of items to look back when searching
   int32 countback = 6 [(buf.validate.field).int32.gte = 0];
 
+  // Whether the source is disabled
+  bool is_disabled = 7;
+
   // Timestamp of last run (optional)
-  optional google.protobuf.Timestamp last_run_at = 7;
+  optional google.protobuf.Timestamp last_run_at = 8;
 
   // Timestamp when source was created
-  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp created_at = 9;
 
   // Timestamp when source was last updated
-  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
 // SourceSchedule represents a schedule for a source

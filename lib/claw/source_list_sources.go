@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"github.com/go-jet/jet/v2/sqlite"
@@ -13,7 +13,7 @@ import (
 )
 
 // ListSources lists sources with optional filtering and cursor-based pagination
-func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourcesRequest) (*sourcev1.ListSourcesResponse, error) {
+func (s *SourceService) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) (*clawv1.ListSourcesResponse, error) {
 	// Build query with optional filters
 	query := sqlite.SELECT(table.Sources.AllColumns).FROM(table.Sources)
 
@@ -43,6 +43,7 @@ func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourc
 		DisplayName string            
 		Parameter   string            
 		Countback   int32             
+		IsDisabled  types.Bool        
 		LastRunAt   *types.UnixMilli  
 		CreatedAt   types.UnixMilli   
 		UpdatedAt   types.UnixMilli   
@@ -64,8 +65,8 @@ func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourc
 	}
 
 	// Convert to protobuf
-	var sources []*sourcev1.Source
-	schedulesMap := make(map[int64]*sourcev1.SourceSchedules)
+	var sources []*clawv1.SourceData
+	schedulesMap := make(map[int64]*clawv1.SourceScheduleList)
 
 	for _, row := range sourceRows {
 		var lastRunAt *timestamppb.Timestamp
@@ -73,13 +74,14 @@ func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourc
 			lastRunAt = row.LastRunAt.ToProto()
 		}
 
-		source := &sourcev1.Source{
+		source := &clawv1.SourceData{
 			Id:          row.ID,
 			Kind:        row.Kind,
 			Slug:        row.Slug,
 			DisplayName: row.DisplayName,
 			Parameter:   row.Parameter,
 			Countback:   row.Countback,
+			IsDisabled:  bool(row.IsDisabled),
 			LastRunAt:   lastRunAt,
 			CreatedAt:   row.CreatedAt.ToProto(),
 			UpdatedAt:   row.UpdatedAt.ToProto(),
@@ -105,9 +107,9 @@ func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourc
 				return nil, fmt.Errorf("failed to get schedules for source %d: %w", row.ID, err)
 			}
 
-			var schedules []*sourcev1.Schedule
+			var schedules []*clawv1.SourceSchedule
 			for _, scheduleRow := range scheduleRows {
-				schedules = append(schedules, &sourcev1.Schedule{
+				schedules = append(schedules, &clawv1.SourceSchedule{
 					Id:        scheduleRow.ID,
 					SourceId:  scheduleRow.SourceID,
 					Schedule:  scheduleRow.Schedule,
@@ -115,11 +117,11 @@ func (s *SourceService) ListSources(ctx context.Context, req *sourcev1.ListSourc
 					UpdatedAt: scheduleRow.UpdatedAt.ToProto(),
 				})
 			}
-			schedulesMap[row.ID] = &sourcev1.SourceSchedules{Schedules: schedules}
+			schedulesMap[row.ID] = &clawv1.SourceScheduleList{Schedules: schedules}
 		}
 	}
 
-	response := &sourcev1.ListSourcesResponse{
+	response := &clawv1.ListSourcesResponse{
 		Sources:       sources,
 		Schedules:     schedulesMap,
 		NextPageToken: nextPageToken,

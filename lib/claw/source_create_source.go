@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CreateSource creates a new source with optional schedules
-func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSourceRequest) (*sourcev1.CreateSourceResponse, error) {
+func (s *SourceService) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest) (*clawv1.CreateSourceResponse, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -27,6 +27,7 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 		table.Sources.DisplayName,
 		table.Sources.Parameter,
 		table.Sources.Countback,
+		table.Sources.IsDisabled,
 		table.Sources.CreatedAt,
 		table.Sources.UpdatedAt,
 	).VALUES(
@@ -35,6 +36,7 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 		req.DisplayName,
 		req.Parameter,
 		req.Countback,
+		types.Bool(req.IsDisabled),
 		nowMillis,
 		nowMillis,
 	).RETURNING(table.Sources.AllColumns)
@@ -46,6 +48,7 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 		DisplayName string
 		Parameter   string
 		Countback   int32
+		IsDisabled  types.Bool
 		LastRunAt   *types.UnixMilli
 		CreatedAt   types.UnixMilli
 		UpdatedAt   types.UnixMilli
@@ -57,7 +60,7 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 	}
 
 	// Create schedules if provided
-	var schedules []*sourcev1.Schedule
+	var schedules []*clawv1.SourceSchedule
 	if len(req.Schedules) > 0 {
 		for _, scheduleStr := range req.Schedules {
 			scheduleStmt := table.Schedules.INSERT(
@@ -83,7 +86,7 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 				return nil, fmt.Errorf("failed to create schedule: %w", err)
 			}
 
-			schedules = append(schedules, &sourcev1.Schedule{
+			schedules = append(schedules, &clawv1.SourceSchedule{
 				Id:        scheduleRow.ID,
 				SourceId:  scheduleRow.SourceID,
 				Schedule:  scheduleRow.Schedule,
@@ -103,19 +106,20 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 		lastRunAt = sourceRow.LastRunAt.ToProto()
 	}
 
-	source := &sourcev1.Source{
+	source := &clawv1.SourceData{
 		Id:          sourceRow.ID,
 		Kind:        sourceRow.Kind,
 		Slug:        sourceRow.Slug,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   sourceRow.Countback,
+		IsDisabled:  bool(sourceRow.IsDisabled),
 		LastRunAt:   lastRunAt,
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
 		UpdatedAt:   sourceRow.UpdatedAt.ToProto(),
 	}
 
-	return &sourcev1.CreateSourceResponse{
+	return &clawv1.CreateSourceResponse{
 		Source:    source,
 		Schedules: schedules,
 	}, nil

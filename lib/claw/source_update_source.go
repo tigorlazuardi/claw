@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"github.com/go-jet/jet/v2/sqlite"
 )
 
 // UpdateSource updates an existing source
-func (s *SourceService) UpdateSource(ctx context.Context, req *sourcev1.UpdateSourceRequest) (*sourcev1.UpdateSourceResponse, error) {
+func (s *SourceService) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest) (*clawv1.UpdateSourceResponse, error) {
 	nowMillis := types.UnixMilliNow()
 
 	// Build dynamic update statement
@@ -34,6 +34,15 @@ func (s *SourceService) UpdateSource(ctx context.Context, req *sourcev1.UpdateSo
 	if req.Countback != nil {
 		updateStmt = updateStmt.SET(table.Sources.Countback.SET(sqlite.Int32(*req.Countback)))
 	}
+	if req.IsDisabled != nil {
+		var disabledVal int64
+		if *req.IsDisabled {
+			disabledVal = 1
+		} else {
+			disabledVal = 0
+		}
+		updateStmt = updateStmt.SET(table.Sources.IsDisabled.SET(sqlite.Int64(disabledVal)))
+	}
 
 	// Execute update
 	result, err := updateStmt.ExecContext(ctx, s.db)
@@ -50,10 +59,10 @@ func (s *SourceService) UpdateSource(ctx context.Context, req *sourcev1.UpdateSo
 	}
 
 	// Get updated source
-	getResp, err := s.GetSource(ctx, &sourcev1.GetSourceRequest{Id: req.Id})
+	getResp, err := s.GetSource(ctx, &clawv1.GetSourceRequest{Id: req.Id})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated source: %w", err)
 	}
 
-	return &sourcev1.UpdateSourceResponse{Source: getResp.Source}, nil
+	return &clawv1.UpdateSourceResponse{Source: getResp.Source}, nil
 }

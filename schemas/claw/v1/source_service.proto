@@ -40,8 +40,11 @@ message CreateSourceRequest {
   // Number of items to look back when searching
   int32 countback = 5 [(buf.validate.field).int32.gte = 0];
 
+  // Whether the source is disabled
+  bool is_disabled = 6;
+
   // Optional schedules to create with the source
-  repeated string schedules = 6;
+  repeated string schedules = 7;
 }
 
 // Create source response
@@ -90,6 +93,9 @@ message UpdateSourceRequest {
 
   // Updated countback (optional)
   optional int32 countback = 6;
+
+  // Updated disabled status (optional)
+  optional bool is_disabled = 7;
 }
 
 // Update source response

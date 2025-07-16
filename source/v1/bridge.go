@@ -3,30 +3,30 @@ package v1
 
 // Re-export all types from the actual generated location
 import (
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 )
 
 // Source types
-type Source = sourcev1.Source
-type Schedule = sourcev1.Schedule
+type SourceData = clawv1.SourceData
+type SourceSchedule = clawv1.SourceSchedule
 
 // Request types
-type CreateSourceRequest = sourcev1.CreateSourceRequest
-type GetSourceRequest = sourcev1.GetSourceRequest
-type UpdateSourceRequest = sourcev1.UpdateSourceRequest
-type DeleteSourceRequest = sourcev1.DeleteSourceRequest
-type ListSourcesRequest = sourcev1.ListSourcesRequest
+type CreateSourceRequest = clawv1.CreateSourceRequest
+type GetSourceRequest = clawv1.GetSourceRequest
+type UpdateSourceRequest = clawv1.UpdateSourceRequest
+type DeleteSourceRequest = clawv1.DeleteSourceRequest
+type ListSourcesRequest = clawv1.ListSourcesRequest
 
 // Response types
-type CreateSourceResponse = sourcev1.CreateSourceResponse
-type GetSourceResponse = sourcev1.GetSourceResponse
-type UpdateSourceResponse = sourcev1.UpdateSourceResponse
-type DeleteSourceResponse = sourcev1.DeleteSourceResponse
-type ListSourcesResponse = sourcev1.ListSourcesResponse
+type CreateSourceResponse = clawv1.CreateSourceResponse
+type GetSourceResponse = clawv1.GetSourceResponse
+type UpdateSourceResponse = clawv1.UpdateSourceResponse
+type DeleteSourceResponse = clawv1.DeleteSourceResponse
+type ListSourcesResponse = clawv1.ListSourcesResponse
 
 // Helper types
-type SourceSchedules = sourcev1.SourceSchedules
+type SourceScheduleList = clawv1.SourceScheduleList
 
 // Re-export the file descriptor
-var File_source_v1_source_proto = sourcev1.File_source_v1_source_proto
-var File_source_v1_source_service_proto = sourcev1.File_source_v1_source_service_proto
+var File_claw_v1_source_proto = clawv1.File_claw_v1_source_proto
+var File_claw_v1_source_service_proto = clawv1.File_claw_v1_source_service_proto

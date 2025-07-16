@@ -5,8 +5,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/tigorlazuardi/claw/lib/claw"
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
-	"github.com/tigorlazuardi/claw/server/gen/source/v1/sourcev1connect"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
+	"github.com/tigorlazuardi/claw/server/gen/claw/v1/clawv1connect"
 )
 
 // SourceHandler implements the ConnectRPC SourceService interface
@@ -20,7 +20,7 @@ func NewSourceHandler(service *claw.SourceService) *SourceHandler {
 }
 
 // CreateSource handles source creation requests
-func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[sourcev1.CreateSourceRequest]) (*connect.Response[sourcev1.CreateSourceResponse], error) {
+func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[clawv1.CreateSourceRequest]) (*connect.Response[clawv1.CreateSourceResponse], error) {
 	resp, err := h.service.CreateSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[s
 }
 
 // GetSource handles source retrieval requests
-func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[sourcev1.GetSourceRequest]) (*connect.Response[sourcev1.GetSourceResponse], error) {
+func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[clawv1.GetSourceRequest]) (*connect.Response[clawv1.GetSourceResponse], error) {
 	resp, err := h.service.GetSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[sour
 }
 
 // UpdateSource handles source update requests
-func (h *SourceHandler) UpdateSource(ctx context.Context, req *connect.Request[sourcev1.UpdateSourceRequest]) (*connect.Response[sourcev1.UpdateSourceResponse], error) {
+func (h *SourceHandler) UpdateSource(ctx context.Context, req *connect.Request[clawv1.UpdateSourceRequest]) (*connect.Response[clawv1.UpdateSourceResponse], error) {
 	resp, err := h.service.UpdateSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (h *SourceHandler) UpdateSource(ctx context.Context, req *connect.Request[s
 }
 
 // DeleteSource handles source deletion requests
-func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[sourcev1.DeleteSourceRequest]) (*connect.Response[sourcev1.DeleteSourceResponse], error) {
+func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[clawv1.DeleteSourceRequest]) (*connect.Response[clawv1.DeleteSourceResponse], error) {
 	resp, err := h.service.DeleteSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[s
 }
 
 // ListSources handles source listing requests
-func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[sourcev1.ListSourcesRequest]) (*connect.Response[sourcev1.ListSourcesResponse], error) {
+func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[clawv1.ListSourcesRequest]) (*connect.Response[clawv1.ListSourcesResponse], error) {
 	resp, err := h.service.ListSources(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -65,4 +65,4 @@ func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[so
 }
 
 // Ensure SourceHandler implements the SourceServiceHandler interface
-var _ sourcev1connect.SourceServiceHandler = (*SourceHandler)(nil)
+var _ clawv1connect.SourceServiceHandler = (*SourceHandler)(nil)

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	sourcev1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/source/v1"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"github.com/go-jet/jet/v2/sqlite"
@@ -13,7 +13,7 @@ import (
 )
 
 // GetSource retrieves a source by ID
-func (s *SourceService) GetSource(ctx context.Context, req *sourcev1.GetSourceRequest) (*sourcev1.GetSourceResponse, error) {
+func (s *SourceService) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*clawv1.GetSourceResponse, error) {
 	// Get source
 	sourceStmt := sqlite.SELECT(table.Sources.AllColumns).
 		FROM(table.Sources).
@@ -26,6 +26,7 @@ func (s *SourceService) GetSource(ctx context.Context, req *sourcev1.GetSourceRe
 		DisplayName string            
 		Parameter   string            
 		Countback   int32             
+		IsDisabled  types.Bool        
 		LastRunAt   *types.UnixMilli  
 		CreatedAt   types.UnixMilli   
 		UpdatedAt   types.UnixMilli   
@@ -45,19 +46,20 @@ func (s *SourceService) GetSource(ctx context.Context, req *sourcev1.GetSourceRe
 		lastRunAt = sourceRow.LastRunAt.ToProto()
 	}
 
-	source := &sourcev1.Source{
+	source := &clawv1.SourceData{
 		Id:          sourceRow.ID,
 		Kind:        sourceRow.Kind,
 		Slug:        sourceRow.Slug,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   sourceRow.Countback,
+		IsDisabled:  bool(sourceRow.IsDisabled),
 		LastRunAt:   lastRunAt,
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
 		UpdatedAt:   sourceRow.UpdatedAt.ToProto(),
 	}
 
-	response := &sourcev1.GetSourceResponse{Source: source}
+	response := &clawv1.GetSourceResponse{Source: source}
 
 	// Get schedules if requested
 	if req.IncludeSchedules {
@@ -79,7 +81,7 @@ func (s *SourceService) GetSource(ctx context.Context, req *sourcev1.GetSourceRe
 		}
 
 		for _, row := range scheduleRows {
-			response.Schedules = append(response.Schedules, &sourcev1.Schedule{
+			response.Schedules = append(response.Schedules, &clawv1.SourceSchedule{
 				Id:        row.ID,
 				SourceId:  row.SourceID,
 				Schedule:  row.Schedule,

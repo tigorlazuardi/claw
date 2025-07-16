@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS sources (
     display_name TEXT NOT NULL,
     parameter TEXT NOT NULL,
     countback INTEGER NOT NULL DEFAULT 0,
+    is_disabled INTEGER NOT NULL DEFAULT 0,
     last_run_at INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
