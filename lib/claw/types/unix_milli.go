@@ -37,6 +37,11 @@ func Now() UnixMilli {
 	return UnixMilli{Time: time.Now()}
 }
 
+// UnixMilliNow returns the current time as UnixMilli (alias for Now)
+func UnixMilliNow() UnixMilli {
+	return Now()
+}
+
 // Scan implements the sql.Scanner interface for reading from the database
 func (u *UnixMilli) Scan(value any) error {
 	if value == nil {
