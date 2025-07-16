@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package source.v1;
+package claw.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
-// Source represents a source of images
-message Source {
+// SourceData represents a source of images
+message SourceData {
   // Unique identifier for the source
   int64 id = 1;
 
@@ -35,8 +35,8 @@ message Source {
   google.protobuf.Timestamp updated_at = 9;
 }
 
-// Schedule represents a schedule for a source
-message Schedule {
+// SourceSchedule represents a schedule for a source
+message SourceSchedule {
   // Unique identifier for the schedule
   int64 id = 1;
 

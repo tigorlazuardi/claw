@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS schedules (
     source_id INTEGER NOT NULL,
     schedule TEXT NOT NULL,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
     FOREIGN KEY (source_id) REFERENCES sources(id) ON DELETE CASCADE
 );
 

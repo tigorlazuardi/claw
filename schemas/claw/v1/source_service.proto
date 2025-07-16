@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package source.v1;
+package claw.v1;
 
 import "buf/validate/validate.proto";
-import "source/v1/source.proto";
+import "claw/v1/source.proto";
 
 // SourceService provides CRUD operations for sources
 service SourceService {
@@ -47,10 +47,10 @@ message CreateSourceRequest {
 // Create source response
 message CreateSourceResponse {
   // The created source
-  Source source = 1;
+  SourceData source = 1;
 
   // Created schedules
-  repeated Schedule schedules = 2;
+  repeated SourceSchedule schedules = 2;
 }
 
 // Get source request
@@ -65,10 +65,10 @@ message GetSourceRequest {
 // Get source response
 message GetSourceResponse {
   // The requested source
-  Source source = 1;
+  SourceData source = 1;
 
   // Associated schedules (if requested)
-  repeated Schedule schedules = 2;
+  repeated SourceSchedule schedules = 2;
 }
 
 // Update source request
@@ -95,7 +95,7 @@ message UpdateSourceRequest {
 // Update source response
 message UpdateSourceResponse {
   // The updated source
-  Source source = 1;
+  SourceData source = 1;
 }
 
 // Delete source request
@@ -134,10 +134,10 @@ message ListSourcesRequest {
 // List sources response
 message ListSourcesResponse {
   // List of sources
-  repeated Source sources = 1;
+  repeated SourceData sources = 1;
 
   // Associated schedules (if requested, indexed by source ID)
-  map<int64, SourceSchedules> schedules = 2;
+  map<int64, SourceScheduleList> schedules = 2;
 
   // Next page token for pagination
   string next_page_token = 3;
@@ -147,7 +147,6 @@ message ListSourcesResponse {
 }
 
 // Helper message for schedules in list response
-message SourceSchedules {
-  repeated Schedule schedules = 1;
+message SourceScheduleList {
+  repeated SourceSchedule schedules = 1;
 }
-
