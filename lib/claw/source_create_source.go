@@ -64,11 +64,9 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 				table.Schedules.SourceID,
 				table.Schedules.Schedule,
 				table.Schedules.CreatedAt,
-				table.Schedules.UpdatedAt,
 			).VALUES(
 				sourceRow.ID,
 				scheduleStr,
-				nowMillis,
 				nowMillis,
 			).RETURNING(table.Schedules.AllColumns)
 
@@ -122,4 +120,3 @@ func (s *SourceService) CreateSource(ctx context.Context, req *sourcev1.CreateSo
 		Schedules: schedules,
 	}, nil
 }
-
