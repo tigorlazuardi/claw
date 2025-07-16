@@ -5,23 +5,16 @@ managed:
     - file_option: go_package_prefix
       value: github.com/tigorlazuardi/claw
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - local: protoc-gen-go
     out: ../lib/claw/gen/proto
     opt:
       - paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - local: protoc-gen-connect-go
     out: ../server/gen
     opt:
       - paths=source_relative
-  - remote: buf.build/bufbuild/validate-go
-    out: ../lib/claw/gen/proto
-    opt:
-      - paths=source_relative
-  - remote: buf.build/protocolbuffers/es
+  - local: protoc-gen-es
     out: ../ui/src/gen
     opt:
       - target=ts
-  - remote: buf.build/connectrpc/es
-    out: ../ui/src/gen
-    opt:
-      - target=ts
+
