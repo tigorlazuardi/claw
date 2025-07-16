@@ -4,6 +4,10 @@ modules:
 lint:
   use:
     - STANDARD
+  ignore:
+    - buf/
 breaking:
   use:
     - FILE
+  ignore:
+    - buf/

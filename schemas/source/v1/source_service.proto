@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package source.v1;
+
+import "buf/validate/validate.proto";
+import "source/v1/source.proto";
+
+// SourceService provides CRUD operations for sources
+service SourceService {
+  // Create a new source
+  rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse);
+
+  // Get a source by ID
+  rpc GetSource(GetSourceRequest) returns (GetSourceResponse);
+
+  // Update an existing source
+  rpc UpdateSource(UpdateSourceRequest) returns (UpdateSourceResponse);
+
+  // Delete a source
+  rpc DeleteSource(DeleteSourceRequest) returns (DeleteSourceResponse);
+
+  // List sources with optional filtering
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse);
+}
+
+// Create source request
+message CreateSourceRequest {
+  // Kind of source (e.g., "reddit", "booru")
+  string kind = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Slug identifier for the source
+  string slug = 2 [(buf.validate.field).string.min_len = 1];
+
+  // Display name for the source
+  string display_name = 3 [(buf.validate.field).string.min_len = 1];
+
+  // Parameters for the source
+  string parameter = 4 [(buf.validate.field).string.min_len = 1];
+
+  // Number of items to look back when searching
+  int32 countback = 5 [(buf.validate.field).int32.gte = 0];
+
+  // Optional schedules to create with the source
+  repeated string schedules = 6;
+}
+
+// Create source response
+message CreateSourceResponse {
+  // The created source
+  Source source = 1;
+
+  // Created schedules
+  repeated Schedule schedules = 2;
+}
+
+// Get source request
+message GetSourceRequest {
+  // Source ID to retrieve
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Whether to include schedules
+  bool include_schedules = 2;
+}
+
+// Get source response
+message GetSourceResponse {
+  // The requested source
+  Source source = 1;
+
+  // Associated schedules (if requested)
+  repeated Schedule schedules = 2;
+}
+
+// Update source request
+message UpdateSourceRequest {
+  // Source ID to update
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Updated kind (optional)
+  optional string kind = 2;
+
+  // Updated slug (optional)
+  optional string slug = 3;
+
+  // Updated display name (optional)
+  optional string display_name = 4;
+
+  // Updated parameters (optional)
+  optional string parameter = 5;
+
+  // Updated countback (optional)
+  optional int32 countback = 6;
+}
+
+// Update source response
+message UpdateSourceResponse {
+  // The updated source
+  Source source = 1;
+}
+
+// Delete source request
+message DeleteSourceRequest {
+  // Source ID to delete
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Delete source response
+message DeleteSourceResponse {
+  // Whether the deletion was successful
+  bool success = 1;
+}
+
+// List sources request
+message ListSourcesRequest {
+  // Optional filter by kind
+  optional string kind = 1;
+
+  // Optional filter by slug
+  optional string slug = 2;
+
+  // Page size for pagination
+  int32 page_size = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 100
+  }];
+
+  // Page token for pagination
+  string page_token = 4;
+
+  // Whether to include schedules for each source
+  bool include_schedules = 5;
+}
+
+// List sources response
+message ListSourcesResponse {
+  // List of sources
+  repeated Source sources = 1;
+
+  // Associated schedules (if requested, indexed by source ID)
+  map<int64, SourceSchedules> schedules = 2;
+
+  // Next page token for pagination
+  string next_page_token = 3;
+
+  // Total count of sources (optional)
+  optional int64 total_count = 4;
+}
+
+// Helper message for schedules in list response
+message SourceSchedules {
+  repeated Schedule schedules = 1;
+}
+

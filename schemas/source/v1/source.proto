@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package source.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Source represents a source of images
+message Source {
+  // Unique identifier for the source
+  int64 id = 1;
+
+  // Kind of source (e.g., "reddit", "booru")
+  string kind = 2 [(buf.validate.field).string.min_len = 1];
+
+  // Slug identifier for the source
+  string slug = 3 [(buf.validate.field).string.min_len = 1];
+
+  // Display name for the source
+  string display_name = 4 [(buf.validate.field).string.min_len = 1];
+
+  // Parameters for the source (JSON string or simple parameter)
+  string parameter = 5 [(buf.validate.field).string.min_len = 1];
+
+  // Number of items to look back when searching
+  int32 countback = 6 [(buf.validate.field).int32.gte = 0];
+
+  // Timestamp of last run (optional)
+  optional google.protobuf.Timestamp last_run_at = 7;
+
+  // Timestamp when source was created
+  google.protobuf.Timestamp created_at = 8;
+
+  // Timestamp when source was last updated
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Schedule represents a schedule for a source
+message Schedule {
+  // Unique identifier for the schedule
+  int64 id = 1;
+
+  // Source ID this schedule belongs to
+  int64 source_id = 2 [(buf.validate.field).int64.gt = 0];
+
+  // Cron expression for the schedule
+  string schedule = 3 [(buf.validate.field).string.min_len = 1];
+
+  // Timestamp when schedule was created
+  google.protobuf.Timestamp created_at = 4;
+
+  // Timestamp when schedule was last updated
+  google.protobuf.Timestamp updated_at = 5;
+}

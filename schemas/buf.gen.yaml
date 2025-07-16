@@ -4,6 +4,8 @@ managed:
   override:
     - file_option: go_package_prefix
       value: github.com/tigorlazuardi/claw
+  disable:
+    - path: buf
 plugins:
   - local: protoc-gen-go
     out: ../lib/claw/gen/proto
@@ -17,4 +19,3 @@ plugins:
     out: ../ui/src/gen
     opt:
       - target=ts
-
