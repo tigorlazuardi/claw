@@ -9,6 +9,8 @@ import (
 	"go.opentelemetry.io/otel/log/global"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // SlogOption is a function that configures a slog handler.
@@ -51,6 +53,10 @@ func WithOtelSlogOptions(opts ...otelslog.Option) SlogOption {
 // When a log field contains a protobuf message, it will be transformed into
 // a slog.GroupValue with all the message fields as structured attributes.
 //
+// Special protobuf well-known types are handled with native slog types:
+//   - timestamppb.Timestamp → slog.TimeValue
+//   - durationpb.Duration → slog.DurationValue
+//
 // Example usage:
 //
 //	provider, err := NewLoggingProvider()
@@ -62,7 +68,12 @@ func WithOtelSlogOptions(opts ...otelslog.Option) SlogOption {
 //	logger := slog.New(handler)
 //
 //	// Logging with protobuf message
-//	msg := &pb.MyMessage{Field1: "value1", Field2: 42}
+//	msg := &pb.MyMessage{
+//		Field1: "value1", 
+//		Field2: 42,
+//		Timestamp: timestamppb.Now(),
+//		Duration: durationpb.New(time.Second * 30),
+//	}
 //	logger.Info("Processing message", "proto", msg)
 //
 // Advanced usage with custom options:
@@ -272,6 +283,9 @@ func (h *slogHandler) protoMapToSlogValue(protoMap protoreflect.Map, field proto
 }
 
 // protoScalarToSlogValue converts a protobuf scalar value to a slog.Value.
+// Special well-known types are handled with native slog types:
+//   - timestamppb.Timestamp → slog.TimeValue
+//   - durationpb.Duration → slog.DurationValue
 func (h *slogHandler) protoScalarToSlogValue(value protoreflect.Value, field protoreflect.FieldDescriptor) slog.Value {
 	switch field.Kind() {
 	case protoreflect.BoolKind:
@@ -300,9 +314,21 @@ func (h *slogHandler) protoScalarToSlogValue(value protoreflect.Value, field pro
 		}
 		return slog.StringValue("unknown")
 	case protoreflect.MessageKind:
-		// Recursively handle nested messages
+		// Handle special well-known types first
 		if value.Message().IsValid() {
 			nestedMsg := value.Message().Interface()
+			
+			// Handle timestamppb.Timestamp
+			if ts, ok := nestedMsg.(*timestamppb.Timestamp); ok {
+				return slog.TimeValue(ts.AsTime())
+			}
+			
+			// Handle durationpb.Duration
+			if dur, ok := nestedMsg.(*durationpb.Duration); ok {
+				return slog.DurationValue(dur.AsDuration())
+			}
+			
+			// For other message types, recursively convert to group
 			return h.protoToGroupValue(nestedMsg)
 		}
 		return slog.StringValue("")
