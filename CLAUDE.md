@@ -177,6 +177,7 @@ go run ./cmd/goose
 - CLAUDE MUST NOT self promote in git commits
 - Git commit style should use conventional commit with scope
 - When creating git commits, you are allowed to run multiple git adds and git commits so the changes are atomic.
+- When creating new structs, types, or functions, always include documentation for them
 
 ## Database Field Naming Conventions
 
