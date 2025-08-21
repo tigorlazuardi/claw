@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tigorlazuardi/claw/lib/claw/gen/model"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
@@ -41,18 +42,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 		nowMillis,
 	).RETURNING(table.Sources.AllColumns)
 
-	var sourceRow struct {
-		ID          int64 `sql:"primary_key"`
-		Kind        string
-		Slug        string
-		DisplayName string
-		Parameter   string
-		Countback   int32
-		IsDisabled  types.Bool
-		LastRunAt   *types.UnixMilli
-		CreatedAt   types.UnixMilli
-		UpdatedAt   types.UnixMilli
-	}
+	var sourceRow model.Sources
 
 	err = sourceStmt.QueryContext(ctx, tx, &sourceRow)
 	if err != nil {
@@ -73,13 +63,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 				nowMillis,
 			).RETURNING(table.Schedules.AllColumns)
 
-			var scheduleRow struct {
-				ID        int64 `sql:"primary_key"`
-				SourceID  int64
-				Schedule  string
-				CreatedAt types.UnixMilli
-				UpdatedAt types.UnixMilli
-			}
+			var scheduleRow model.Schedules
 
 			err = scheduleStmt.QueryContext(ctx, tx, &scheduleRow)
 			if err != nil {
@@ -87,11 +71,10 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 			}
 
 			schedules = append(schedules, &clawv1.SourceSchedule{
-				Id:        scheduleRow.ID,
+				Id:        *scheduleRow.ID,
 				SourceId:  scheduleRow.SourceID,
 				Schedule:  scheduleRow.Schedule,
 				CreatedAt: scheduleRow.CreatedAt.ToProto(),
-				UpdatedAt: scheduleRow.UpdatedAt.ToProto(),
 			})
 		}
 	}
@@ -107,12 +90,12 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 	}
 
 	source := &clawv1.SourceData{
-		Id:          sourceRow.ID,
+		Id:          *sourceRow.ID,
 		Kind:        sourceRow.Kind,
 		Slug:        sourceRow.Slug,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
-		Countback:   sourceRow.Countback,
+		Countback:   int32(sourceRow.Countback),
 		IsDisabled:  bool(sourceRow.IsDisabled),
 		LastRunAt:   lastRunAt,
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
