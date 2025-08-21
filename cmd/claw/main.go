@@ -14,7 +14,12 @@ import (
 func main() {
 	// Create context that cancels on interrupt/termination signals
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	defer stop()
+	go func() {
+		<-ctx.Done()
+		// Ensure we only listen for signals once. We want consecutive signals to force exit the
+		// program
+		stop()
+	}()
 
 	app := &cli.Command{
 		Name:    "claw",
@@ -30,4 +35,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
