@@ -85,6 +85,7 @@
               mkdir -p artifacts
 
               export GOOSE_DBSTRING="artifacts/dev.db"
+              export GOROOT="${pkgs.go}/share/go"
               echo "GOOSE_DBSTRING set to: $GOOSE_DBSTRING"
               echo ""
 
