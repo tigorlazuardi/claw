@@ -3,7 +3,7 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/tigorlazuardi/claw
+      value: github.com/tigorlazuardi/claw/lib/claw/gen/proto
   disable:
     - path: buf
 plugins:
