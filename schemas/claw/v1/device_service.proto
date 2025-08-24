@@ -21,6 +21,9 @@ service DeviceService {
 
   // List devices with optional filtering
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+
+  // Get device dropdown options (slug and name pairs)
+  rpc ListDropDownDevices(ListDropDownDevicesRequest) returns (ListDropDownDevicesResponse);
 }
 
 // Create device request
@@ -96,12 +99,15 @@ message CreateDeviceRequest {
   //
   // Set to null or value of 0 to disable validation.
   optional uint64 image_max_filesize = 13;
+
+  // NSFW content handling mode
+  NSFWMode nsfw = 14;
 }
 
 // Create device response
 message CreateDeviceResponse {
   // The created device
-  DeviceData device = 1;
+  Device device = 1;
 }
 
 // Get device request
@@ -113,7 +119,7 @@ message GetDeviceRequest {
 // Get device response
 message GetDeviceResponse {
   // The requested device
-  DeviceData device = 1;
+  Device device = 1;
 }
 
 // Update device request
@@ -156,12 +162,15 @@ message UpdateDeviceRequest {
 
   // Updated maximum image file size (optional)
   optional uint64 image_max_filesize = 14;
+
+  // Updated NSFW content handling mode (optional)
+  optional NSFWMode nsfw = 15;
 }
 
 // Update device response
 message UpdateDeviceResponse {
   // The updated device
-  DeviceData device = 1;
+  Device device = 1;
 }
 
 // Delete device request
@@ -178,28 +187,47 @@ message DeleteDeviceResponse {
 
 // List devices request
 message ListDevicesRequest {
-  // Optional filter by slug
-  optional string slug = 1;
+  // Search term to filter devices by slug or name
+  optional string search = 1;
 
-  // Page size for pagination
-  int32 page_size = 2 [(buf.validate.field).int32 = {
+  // Page size for pagination. Default is 20, max is 100.
+  optional int32 page_size = 2 [(buf.validate.field).int32 = {
     gte: 1
     lte: 100
   }];
 
   // Page token for pagination
-  string page_token = 3;
+  optional uint32 page_token = 3;
 }
 
 // List devices response
 message ListDevicesResponse {
   // List of devices
-  repeated DeviceData devices = 1;
+  repeated Device devices = 1;
 
   // Next page token for pagination
-  string next_page_token = 2;
+  optional uint32 next_page_token = 2;
 
   // Total count of devices (optional)
   optional int64 total_count = 3;
 }
 
+// List dropdown devices request
+message ListDropDownDevicesRequest {
+  // Empty message
+}
+
+// Device dropdown option containing slug and optional name
+message DeviceDropDownOption {
+  // Device slug
+  string slug = 1;
+
+  // Device display name, null if not set by user.
+  optional string name = 2;
+}
+
+// List dropdown devices response
+message ListDropDownDevicesResponse {
+  // List of device dropdown options
+  repeated DeviceDropDownOption devices = 1;
+}

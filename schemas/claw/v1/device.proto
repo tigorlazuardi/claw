@@ -5,8 +5,23 @@ package claw.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
-// DeviceData represents a target device for image assignment
-message DeviceData {
+// NSFWMode defines how NSFW content should be handled for a device
+enum NSFWMode {
+  // Unspecified NSFW mode
+  NSFW_MODE_UNSPECIFIED = 0;
+  
+  // Allow NSFW content
+  NSFW_MODE_ALLOW = 1;
+  
+  // Disallow NSFW content
+  NSFW_MODE_DISALLOW = 2;
+  
+  // Only allow NSFW content
+  NSFW_MODE_ONLY = 3;
+}
+
+// Device represents a target device for image assignment
+message Device {
   // Unique identifier for the device
   int64 id = 1;
 
@@ -49,9 +64,13 @@ message DeviceData {
   // Maximum image file size in bytes
   uint64 image_max_filesize = 14 [(buf.validate.field).uint64.gt = 0];
 
+  // NSFW content handling mode
+  NSFWMode nsfw = 15;
+
   // Timestamp when device was created
-  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp created_at = 16;
 
   // Timestamp when device was last updated
-  google.protobuf.Timestamp updated_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
 }
+
