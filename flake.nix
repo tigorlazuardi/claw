@@ -31,6 +31,15 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           validateProtos = protoValidate pkgs;
+          kittyConfig = ''
+            layout tall
+            launch --title="Command" fish
+            launch --title="Server" wgo -file=.go clear :: go run ./cmd/claw/main.go server
+            launch --title="Migrations" wgo -file=.sql clear :: go run ./cmd/goose/main.go --reset :: go run ./cmd/go-jet/main.go
+            launch --hold --title="Protobuf" ${pkgs.writeShellScript "proto-watch" ''
+              cd ./schemas && wgo -file=.proto -file=buf.gen.yaml -file=buf.yaml clear :: buf generate :: echo "Protobuf generated. Watching for changes..."
+            ''}
+          '';
         in
         {
           default = pkgs.mkShell {
@@ -56,6 +65,13 @@
               git
               curl
               jq
+
+              fish
+              wgo
+
+              (writeShellScriptBin "dev" ''
+                ${kitty}/bin/kitty --working-directory=$KITTY_PWD --session ${pkgs.writeText "kitty.conf" kittyConfig}
+              '')
             ];
 
             shellHook = ''
@@ -84,8 +100,9 @@
               # Create artifacts directory if it doesn't exist
               mkdir -p artifacts
 
-              export GOOSE_DBSTRING="artifacts/dev.db"
+              export GOOSE_DBSTRING="$(pwd)/artifacts/dev.db"
               export GOROOT="${pkgs.go}/share/go"
+              export KITTY_PWD="$(pwd)"
               echo "GOOSE_DBSTRING set to: $GOOSE_DBSTRING"
               echo ""
 
