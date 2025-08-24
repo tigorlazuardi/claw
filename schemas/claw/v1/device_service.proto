@@ -24,6 +24,12 @@ service DeviceService {
 
   // Get device dropdown options (slug and name pairs)
   rpc ListDropDownDevices(ListDropDownDevicesRequest) returns (ListDropDownDevicesResponse);
+
+  // Subscribe a device to sources
+  rpc SubscribeDevice(SubscribeDeviceRequest) returns (SubscribeDeviceResponse);
+
+  // Unsubscribe a device from sources
+  rpc UnsubscribeDevice(UnsubscribeDeviceRequest) returns (UnsubscribeDeviceResponse);
 }
 
 // Create device request
@@ -102,6 +108,9 @@ message CreateDeviceRequest {
 
   // NSFW content handling mode
   NSFWMode nsfw = 14;
+
+  // List of source IDs to automatically subscribe this device to
+  repeated int64 subscriptions = 15;
 }
 
 // Create device response
@@ -230,4 +239,34 @@ message DeviceDropDownOption {
 message ListDropDownDevicesResponse {
   // List of device dropdown options
   repeated DeviceDropDownOption devices = 1;
+}
+
+// Subscribe device request
+message SubscribeDeviceRequest {
+  // Device ID to subscribe
+  int64 device_id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // List of source IDs to subscribe to
+  repeated int64 source_ids = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Subscribe device response
+message SubscribeDeviceResponse {
+  // The updated device with new subscriptions
+  Device device = 1;
+}
+
+// Unsubscribe device request
+message UnsubscribeDeviceRequest {
+  // Device ID to unsubscribe
+  int64 device_id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // List of source IDs to unsubscribe from
+  repeated int64 source_ids = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Unsubscribe device response
+message UnsubscribeDeviceResponse {
+  // The updated device with remaining subscriptions
+  Device device = 1;
 }

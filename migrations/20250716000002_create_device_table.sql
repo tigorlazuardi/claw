@@ -1,18 +1,22 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS devices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '',
     slug TEXT NOT NULL UNIQUE,
-    min_width INTEGER,
-    max_width INTEGER,
-    min_height INTEGER,
-    max_height INTEGER,
-    aspect_ratio_tolerance REAL,
-    nsfw_mode INTEGER NOT NULL DEFAULT 0, -- 0=unspecified, 1=block, 2=accept, 3=only
-    min_file_size INTEGER,
-    max_file_size INTEGER,
+    save_dir TEXT NOT NULL DEFAULT '',
+    filename_template TEXT NOT NULL DEFAULT '',
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    aspect_ratio_difference REAL NOT NULL DEFAULT 0.0,
+    image_min_width INTEGER NOT NULL DEFAULT 0,
+    image_max_width INTEGER NOT NULL DEFAULT 0,
+    image_min_height INTEGER NOT NULL DEFAULT 0,
+    image_max_height INTEGER NOT NULL DEFAULT 0,
+    image_min_file_size INTEGER NOT NULL DEFAULT 0,
+    image_max_file_size INTEGER NOT NULL DEFAULT 0,
+    nsfw_mode INTEGER NOT NULL DEFAULT 0, -- 0=unspecified, 1=allow, 2=block, 3=only
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL 
 );
 
 CREATE TABLE IF NOT EXISTS device_sources (

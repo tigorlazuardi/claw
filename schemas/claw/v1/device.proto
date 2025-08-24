@@ -72,5 +72,8 @@ message Device {
 
   // Timestamp when device was last updated
   google.protobuf.Timestamp updated_at = 17;
+
+  // List of source IDs this device is subscribed to
+  repeated int64 subscriptions = 18;
 }
 
