@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Image represents a downloaded image with metadata
+message Image {
+  // Unique identifier for the image
+  int64 id = 1;
+
+  // Source ID that downloaded this image
+  int64 source_id = 2 [(buf.validate.field).int64.gt = 0];
+
+  // List of device IDs this image belongs to
+  repeated int64 device_ids = 3;
+
+  // List of file paths where this image exists (hardlinks/copies)
+  repeated string paths = 4;
+
+  // Original download URL
+  string download_url = 5 [(buf.validate.field).string.min_len = 1];
+
+  // Image width in pixels
+  int32 width = 6 [(buf.validate.field).int32.gt = 0];
+
+  // Image height in pixels
+  int32 height = 7 [(buf.validate.field).int32.gt = 0];
+
+  // File size in bytes
+  uint32 filesize = 8 [(buf.validate.field).uint32.gt = 0];
+
+  // Thumbnail relative path for client access
+  optional string thumbnail_path = 9;
+
+  // Image relative path for client access
+  string image_path = 10 [(buf.validate.field).string.min_len = 1];
+
+  // Name of the person who posted this image
+  optional string post_author = 11;
+
+  // URL to the poster's profile/webpage
+  optional string post_author_url = 12;
+
+  // URL to the original post page
+  optional string post_url = 13;
+
+  // Whether this image is marked as favorite by the user
+  bool is_favorite = 14;
+
+  // List of tags associated with this image
+  repeated string tags = 15;
+
+  // Timestamp when image was downloaded
+  google.protobuf.Timestamp created_at = 16;
+
+  // Timestamp when image metadata was last updated
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+// ImageField enum for specifying which field to use for operations
+enum ImageField {
+  IMAGE_FIELD_UNSPECIFIED = 0;
+  IMAGE_FIELD_ID = 1;
+  IMAGE_FIELD_SOURCE_ID = 2;
+  IMAGE_FIELD_DOWNLOAD_URL = 3;
+  IMAGE_FIELD_WIDTH = 4;
+  IMAGE_FIELD_HEIGHT = 5;
+  IMAGE_FIELD_FILESIZE = 6;
+  IMAGE_FIELD_THUMBNAIL_PATH = 7;
+  IMAGE_FIELD_IMAGE_PATH = 8;
+  IMAGE_FIELD_POST_AUTHOR = 9;
+  IMAGE_FIELD_POST_AUTHOR_URL = 10;
+  IMAGE_FIELD_POST_URL = 11;
+  IMAGE_FIELD_IS_FAVORITE = 12;
+  IMAGE_FIELD_CREATED_AT = 13;
+  IMAGE_FIELD_UPDATED_AT = 14;
+}
+

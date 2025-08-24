@@ -3,6 +3,8 @@ package types
 import (
 	"database/sql/driver"
 	"fmt"
+
+	"github.com/go-jet/jet/v2/sqlite"
 )
 
 // Bool represents a boolean value that stores 0/1 in the database
@@ -86,4 +88,11 @@ func (b Bool) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+func (b Bool) Integer() sqlite.IntegerExpression {
+	if bool(b) {
+		return sqlite.Int(1)
+	}
+	return sqlite.Int(0)
 }

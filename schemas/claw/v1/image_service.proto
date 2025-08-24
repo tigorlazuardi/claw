@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "claw/v1/image.proto";
+import "claw/v1/pagination.proto";
+
+// ImageService provides operations for managing downloaded images
+service ImageService {
+  // Get an image by ID
+  rpc GetImage(GetImageRequest) returns (GetImageResponse);
+
+  // List images with optional filtering
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+
+  // Update an existing image
+  rpc UpdateImage(UpdateImageRequest) returns (UpdateImageResponse);
+
+  // Delete images by IDs
+  rpc DeleteImages(DeleteImagesRequest) returns (DeleteImagesResponse);
+
+  // Mark/unmark images as favorite
+  rpc MarkFavorite(MarkFavoriteRequest) returns (MarkFavoriteResponse);
+
+  // Assign tags to images
+  rpc AssignTags(AssignTagsRequest) returns (AssignTagsResponse);
+}
+
+// Get image request
+message GetImageRequest {
+  // Image ID to retrieve
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Get image response
+message GetImageResponse {
+  // The requested image
+  Image image = 1;
+}
+
+// List images request
+message ListImagesRequest {
+  // Search term to filter images by author or post info
+  optional string search = 1;
+
+  // Filter by source ID
+  optional int64 source_id = 2;
+
+  // Filter by device ID
+  optional int64 device_id = 3;
+
+  // Filter by favorite status
+  optional bool is_favorite = 4;
+
+  repeated string tags = 5;
+
+  message Sort {
+    ImageField field = 1;
+    bool desc = 2;
+  }
+
+  repeated Sort sorts = 9;
+
+  optional Pagination pagination = 10;
+}
+
+// List images response
+message ListImagesResponse {
+  // List of images
+  repeated Image images = 1;
+
+  // Next page token for pagination
+  optional uint32 next_page_token = 2;
+
+  // Total count of images (optional)
+  optional int64 total_count = 3;
+
+  message Sort {
+    ImageField field = 1 [(buf.validate.field).enum.defined_only = true];
+    bool desc = 2;
+  }
+}
+
+// Update image request
+message UpdateImageRequest {
+  // Image ID to update
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Updated post author (optional)
+  optional string post_author = 2;
+
+  // Updated post author URL (optional)
+  optional string post_author_url = 3;
+
+  // Updated post URL (optional)
+  optional string post_url = 4;
+
+  // Updated favorite status (optional)
+  optional bool is_favorite = 5;
+
+  // Updated tags (replaces existing tags)
+  repeated string tags = 6;
+
+  // Updated device assignments (replaces existing assignments)
+  repeated int64 device_ids = 7;
+}
+
+// Update image response
+message UpdateImageResponse {
+  // The updated image
+  Image image = 1;
+}
+
+// Delete images request
+message DeleteImagesRequest {
+  // Image IDs to delete
+  repeated int64 ids = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Delete images response
+message DeleteImagesResponse {
+  // Number of images deleted
+  int32 deleted_count = 1;
+}
+
+// Mark favorite request
+message MarkFavoriteRequest {
+  // Image IDs to update
+  repeated int64 image_ids = 1 [(buf.validate.field).repeated.min_items = 1];
+
+  // Whether to mark as favorite (true) or unfavorite (false)
+  bool is_favorite = 2;
+}
+
+// Mark favorite response
+message MarkFavoriteResponse {
+  // Number of images updated
+  int32 updated_count = 1;
+}
+
+// Assign tags request
+message AssignTagsRequest {
+  // Image IDs to tag
+  repeated int64 image_ids = 1 [(buf.validate.field).repeated.min_items = 1];
+
+  // Tags to assign
+  repeated string tags = 2 [(buf.validate.field).repeated.min_items = 1];
+
+  // Whether to replace existing tags (true) or add to them (false)
+  bool replace_existing = 3;
+}
+
+// Assign tags response
+message AssignTagsResponse {
+  // Number of images updated
+  int32 updated_count = 1;
+}
+

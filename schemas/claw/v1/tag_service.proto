@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "claw/v1/tag.proto";
+
+// TagService provides CRUD operations for tags
+service TagService {
+  // Create a new tag
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse);
+
+  // Get a tag by ID
+  rpc GetTag(GetTagRequest) returns (GetTagResponse);
+
+  // Update an existing tag
+  rpc UpdateTag(UpdateTagRequest) returns (UpdateTagResponse);
+
+  // Delete tags by IDs
+  rpc DeleteTags(DeleteTagsRequest) returns (DeleteTagsResponse);
+
+  // List all tags with optional filtering
+  rpc ListTags(ListTagsRequest) returns (ListTagsResponse);
+
+  // Get popular tags (most used)
+  rpc GetPopularTags(GetPopularTagsRequest) returns (GetPopularTagsResponse);
+}
+
+// Create tag request
+message CreateTagRequest {
+  // The tag name
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// Create tag response
+message CreateTagResponse {
+  // The created tag
+  Tag tag = 1;
+}
+
+// Get tag request
+message GetTagRequest {
+  // Tag ID to retrieve
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Get tag response
+message GetTagResponse {
+  // The requested tag
+  Tag tag = 1;
+}
+
+// Update tag request
+message UpdateTagRequest {
+  // Tag ID to update
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Updated tag name
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// Update tag response
+message UpdateTagResponse {
+  // The updated tag
+  Tag tag = 1;
+}
+
+// Delete tags request
+message DeleteTagsRequest {
+  // Tag IDs to delete
+  repeated int64 ids = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Delete tags response
+message DeleteTagsResponse {
+  // Number of tags deleted
+  int32 deleted_count = 1;
+}
+
+// List tags request
+message ListTagsRequest {
+  // Search term to filter tags by name
+  optional string search = 1;
+
+  // Page size for pagination. Default is 50, max is 200.
+  optional int32 page_size = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 200
+  }];
+
+  // Page token for pagination
+  optional uint32 page_token = 3;
+
+  // Sort order for results
+  optional TagSortOrder sort_order = 4;
+}
+
+// Sort order for tag listings
+enum TagSortOrder {
+  // Unspecified sort order (defaults to alphabetical)
+  TAG_SORT_ORDER_UNSPECIFIED = 0;
+  
+  // Sort alphabetically A-Z
+  TAG_SORT_ORDER_ALPHABETICAL = 1;
+  
+  // Sort by usage count, most used first
+  TAG_SORT_ORDER_MOST_USED = 2;
+  
+  // Sort by creation date, newest first
+  TAG_SORT_ORDER_NEWEST_FIRST = 3;
+}
+
+// List tags response
+message ListTagsResponse {
+  // List of tags
+  repeated Tag tags = 1;
+
+  // Next page token for pagination
+  optional uint32 next_page_token = 2;
+
+  // Total count of tags (optional)
+  optional int64 total_count = 3;
+}
+
+// Get popular tags request
+message GetPopularTagsRequest {
+  // Maximum number of tags to return (default 20, max 100)
+  optional int32 limit = 1 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 100
+  }];
+}
+
+// Get popular tags response
+message GetPopularTagsResponse {
+  // List of popular tags ordered by usage count
+  repeated Tag tags = 1;
+}

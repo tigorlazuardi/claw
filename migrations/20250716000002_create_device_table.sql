@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS devices (
     image_max_file_size INTEGER NOT NULL DEFAULT 0,
     nsfw_mode INTEGER NOT NULL DEFAULT 0, -- 0=unspecified, 1=allow, 2=block, 3=only
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL 
+    updated_at INTEGER NOT NULL,
+    last_active_at INTEGER -- Last time an image was downloaded for this device
 );
 
 CREATE TABLE IF NOT EXISTS device_sources (

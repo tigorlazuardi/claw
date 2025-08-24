@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Tag represents a tag that can be applied to images
+message Tag {
+  // Unique identifier for the tag
+  int64 id = 1;
+
+  // The tag name
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+
+  // Number of images with this tag
+  int32 image_count = 3;
+
+  // Timestamp when tag was created
+  google.protobuf.Timestamp created_at = 4;
+}
