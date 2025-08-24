@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// DeviceData represents a target device for image assignment
+message DeviceData {
+  // Unique identifier for the device
+  int64 id = 1;
+
+  // Slug identifier for the device
+  string slug = 2 [(buf.validate.field).string.min_len = 1];
+
+  // Display name for the device (optional)
+  optional string name = 3;
+
+  // Device screen height in pixels
+  int32 height = 4 [(buf.validate.field).int32.gt = 0];
+
+  // Device screen width in pixels
+  int32 width = 5 [(buf.validate.field).int32.gt = 0];
+
+  // Acceptable aspect ratio difference as float
+  double aspect_ratio_difference = 6 [(buf.validate.field).double.gte = 0];
+
+  // Directory where images for this device are saved
+  string save_dir = 7 [(buf.validate.field).string.min_len = 1];
+
+  // Template for filename generation (optional)
+  optional string filename_template = 8;
+
+  // Minimum image height in pixels
+  uint32 image_min_height = 9 [(buf.validate.field).uint32.gt = 0];
+
+  // Minimum image width in pixels
+  uint32 image_min_width = 10 [(buf.validate.field).uint32.gt = 0];
+
+  // Maximum image height in pixels
+  uint32 image_max_height = 11 [(buf.validate.field).uint32.gt = 0];
+
+  // Maximum image width in pixels
+  uint32 image_max_width = 12 [(buf.validate.field).uint32.gt = 0];
+
+  // Minimum image file size in bytes
+  uint64 image_min_filesize = 13 [(buf.validate.field).uint64.gte = 0];
+
+  // Maximum image file size in bytes
+  uint64 image_max_filesize = 14 [(buf.validate.field).uint64.gt = 0];
+
+  // Timestamp when device was created
+  google.protobuf.Timestamp created_at = 15;
+
+  // Timestamp when device was last updated
+  google.protobuf.Timestamp updated_at = 16;
+}

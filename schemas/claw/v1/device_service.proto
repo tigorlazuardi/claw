@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "claw/v1/device.proto";
+
+// DeviceService provides CRUD operations for devices
+service DeviceService {
+  // Create a new device
+  rpc CreateDevice(CreateDeviceRequest) returns (CreateDeviceResponse);
+
+  // Get a device by ID
+  rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse);
+
+  // Update an existing device
+  rpc UpdateDevice(UpdateDeviceRequest) returns (UpdateDeviceResponse);
+
+  // Delete a device
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+
+  // List devices with optional filtering
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+}
+
+// Create device request
+message CreateDeviceRequest {
+  // Slug identifier for the device
+  string slug = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Display name for the device (optional)
+  optional string name = 2;
+
+  // Device screen height in pixels
+  int32 height = 3 [(buf.validate.field).int32.gt = 0];
+
+  // Device screen width in pixels
+  int32 width = 4 [(buf.validate.field).int32.gt = 0];
+
+  // Acceptable aspect ratio difference as between device and image.
+  //
+  // The values are calculated by comparing the aspect ratios of the device
+  // and the image. If the absolute difference between these two ratios is
+  // less than or equal to the specified aspect_ratio_difference, the image
+  // is considered a match for the device.
+  //
+  // For example, if a device has an aspect ratio of 16:9 (approximately 1.78)
+  // and an image has an aspect ratio of 16:10 (1.6), the absolute difference
+  // is |1.78 - 1.6| = 0.18. If the aspect_ratio_difference is set to 0.2,
+  // this image would be considered a match for the device.
+  // Set value to 0 to require exact aspect ratio match.
+  //
+  // Recommended value is between 0.1 to 0.3 to allow images that matches the device
+  // close enough that "stretching" or "fill" scaling modes will not distort
+  // or crop the image too much. A value of 0.2 is a good starting point for most devices.
+  double aspect_ratio_difference = 5 [(buf.validate.field).double.gte = 0];
+
+  // Directory where images for this device are saved
+  //
+  // If null or empty, the default save directory will be used.
+  optional string save_dir = 6;
+
+  // Template for filename generation (optional). Can use Go template syntax.
+  //
+  // TODO: document available variables for the template
+  //
+  // If null or empty, the default filename template will be used.
+  optional string filename_template = 7;
+
+  // Minimum image height in pixels
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint32 image_min_height = 8;
+
+  // Minimum image width in pixels
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint32 image_min_width = 9;
+
+  // Maximum image height in pixels
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint32 image_max_height = 10;
+
+  // Maximum image width in pixels
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint32 image_max_width = 11;
+
+  // Minimum image file size in bytes
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint64 image_min_filesize = 12;
+
+  // Maximum image file size in bytes
+  //
+  // Set to null or value of 0 to disable validation.
+  optional uint64 image_max_filesize = 13;
+}
+
+// Create device response
+message CreateDeviceResponse {
+  // The created device
+  DeviceData device = 1;
+}
+
+// Get device request
+message GetDeviceRequest {
+  // Device ID to retrieve
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Get device response
+message GetDeviceResponse {
+  // The requested device
+  DeviceData device = 1;
+}
+
+// Update device request
+message UpdateDeviceRequest {
+  // Updated slug (optional)
+  string slug = 2 [(buf.validate.field).string.min_len = 1];
+
+  // Updated display name (optional)
+  optional string name = 3;
+
+  // Updated device screen height in pixels (optional)
+  optional int32 height = 4;
+
+  // Updated device screen width in pixels (optional)
+  optional int32 width = 5;
+
+  // Updated acceptable aspect ratio difference (optional)
+  optional double aspect_ratio_difference = 6;
+
+  // Updated save directory (optional)
+  optional string save_dir = 7;
+
+  // Updated filename template (optional)
+  optional string filename_template = 8;
+
+  // Updated minimum image height (optional)
+  optional uint32 image_min_height = 9;
+
+  // Updated minimum image width (optional)
+  optional uint32 image_min_width = 10;
+
+  // Updated maximum image height (optional)
+  optional uint32 image_max_height = 11;
+
+  // Updated maximum image width (optional)
+  optional uint32 image_max_width = 12;
+
+  // Updated minimum image file size (optional)
+  optional uint64 image_min_filesize = 13;
+
+  // Updated maximum image file size (optional)
+  optional uint64 image_max_filesize = 14;
+}
+
+// Update device response
+message UpdateDeviceResponse {
+  // The updated device
+  DeviceData device = 1;
+}
+
+// Delete device request
+message DeleteDeviceRequest {
+  // Device Slugs to delete.
+  repeated string slugs = 1;
+}
+
+// Delete device response
+message DeleteDeviceResponse {
+  // Whether the deletion was successful
+  bool success = 1;
+}
+
+// List devices request
+message ListDevicesRequest {
+  // Optional filter by slug
+  optional string slug = 1;
+
+  // Page size for pagination
+  int32 page_size = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 100
+  }];
+
+  // Page token for pagination
+  string page_token = 3;
+}
+
+// List devices response
+message ListDevicesResponse {
+  // List of devices
+  repeated DeviceData devices = 1;
+
+  // Next page token for pagination
+  string next_page_token = 2;
+
+  // Total count of devices (optional)
+  optional int64 total_count = 3;
+}
+
