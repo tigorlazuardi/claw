@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-jet/jet/v2/sqlite"
+	. "github.com/go-jet/jet/v2/sqlite"
+	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 )
 
 // DeleteSource deletes a source by ID
 func (s *Claw) DeleteSource(ctx context.Context, req *clawv1.DeleteSourceRequest) (*clawv1.DeleteSourceResponse, error) {
-	deleteStmt := table.Sources.DELETE().WHERE(table.Sources.ID.EQ(sqlite.Int64(req.Id)))
-
-	result, err := deleteStmt.ExecContext(ctx, s.db)
+	in := make([]Expression, 0, len(req.Ids))
+	for _, id := range req.Ids {
+		in = append(in, Int64(int64(id)))
+	}
+	result, err := Sources.DELETE().WHERE(Sources.ID.IN(in...)).ExecContext(ctx, s.db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete source: %w", err)
+		return nil, fmt.Errorf("failed to delete sources: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -25,4 +27,3 @@ func (s *Claw) DeleteSource(ctx context.Context, req *clawv1.DeleteSourceRequest
 
 	return &clawv1.DeleteSourceResponse{Success: rowsAffected > 0}, nil
 }
-

@@ -33,7 +33,7 @@ func main() {
 				Name:    "output",
 				Aliases: []string{"o"},
 				Usage:   "Output directory for generated code",
-				Value:   "lib/claw/gen",
+				Value:   "lib/claw/gen/jet",
 			},
 			&cli.StringFlag{
 				Name:    "package",

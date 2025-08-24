@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/tigorlazuardi/claw/schemas/claw/v1;clawv1";
+
+// Pagination represents generic pagination parameters for API requests.
+message Pagination {
+  option (buf.validate.message).cel = {
+    id: "exclusive_pagination_tokens"
+    message: "Only one of next_token or prev_token can be set"
+    expression: "!(this.next_token != 0 && this.prev_token != 0)"
+  };
+
+  // size specifies the number of items to return per page.
+  optional uint32 size = 1;
+  // next_token is used to fetch the next page of results.
+  optional uint32 next_token = 2;
+  // prev_token is used to fetch the previous page of results.
+  optional uint32 prev_token = 3;
+}

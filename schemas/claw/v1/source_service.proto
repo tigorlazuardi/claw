@@ -3,7 +3,21 @@ syntax = "proto3";
 package claw.v1;
 
 import "buf/validate/validate.proto";
+import "claw/v1/pagination.proto";
 import "claw/v1/source.proto";
+
+// SourceSortField defines the fields that can be used for sorting sources
+enum SourceSortField {
+  SOURCE_SORT_FIELD_UNSPECIFIED = 0;
+  SOURCE_SORT_FIELD_ID = 1;
+  SOURCE_SORT_FIELD_KIND = 2;
+  SOURCE_SORT_FIELD_DISPLAY_NAME = 3;
+  SOURCE_SORT_FIELD_COUNTBACK = 4;
+  SOURCE_SORT_FIELD_IS_DISABLED = 5;
+  SOURCE_SORT_FIELD_LAST_RUN_AT = 6;
+  SOURCE_SORT_FIELD_CREATED_AT = 7;
+  SOURCE_SORT_FIELD_UPDATED_AT = 8;
+}
 
 // SourceService provides CRUD operations for sources
 service SourceService {
@@ -28,9 +42,6 @@ message CreateSourceRequest {
   // Kind of source (e.g., "reddit", "booru")
   string kind = 1 [(buf.validate.field).string.min_len = 1];
 
-  // Slug identifier for the source
-  string slug = 2 [(buf.validate.field).string.min_len = 1];
-
   // Display name for the source
   string display_name = 3 [(buf.validate.field).string.min_len = 1];
 
@@ -50,7 +61,7 @@ message CreateSourceRequest {
 // Create source response
 message CreateSourceResponse {
   // The created source
-  SourceData source = 1;
+  Source source = 1;
 
   // Created schedules
   repeated SourceSchedule schedules = 2;
@@ -59,16 +70,16 @@ message CreateSourceResponse {
 // Get source request
 message GetSourceRequest {
   // Source ID to retrieve
-  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+  int64 id = 1;
 
   // Whether to include schedules
-  bool include_schedules = 2;
+  optional bool include_schedules = 2;
 }
 
 // Get source response
 message GetSourceResponse {
   // The requested source
-  SourceData source = 1;
+  Source source = 1;
 
   // Associated schedules (if requested)
   repeated SourceSchedule schedules = 2;
@@ -76,14 +87,11 @@ message GetSourceResponse {
 
 // Update source request
 message UpdateSourceRequest {
-  // Source ID to update
-  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+  // Source UID to update
+  int64 id = 1;
 
   // Updated kind (optional)
   optional string kind = 2;
-
-  // Updated slug (optional)
-  optional string slug = 3;
 
   // Updated display name (optional)
   optional string display_name = 4;
@@ -101,13 +109,13 @@ message UpdateSourceRequest {
 // Update source response
 message UpdateSourceResponse {
   // The updated source
-  SourceData source = 1;
+  Source source = 1;
 }
 
 // Delete source request
 message DeleteSourceRequest {
-  // Source ID to delete
-  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+  // Source IDs to delete
+  repeated int64 ids = 1;
 }
 
 // Delete source response
@@ -121,35 +129,38 @@ message ListSourcesRequest {
   // Optional filter by kind
   optional string kind = 1;
 
-  // Optional filter by slug
-  optional string slug = 2;
+  // Search term to filter sources by uid, kind, or display name
+  optional string search = 2;
 
-  // Page size for pagination
-  int32 page_size = 3 [(buf.validate.field).int32 = {
-    gte: 1
-    lte: 100
-  }];
+  message Sort {
+    // Field to sort by
+    SourceSortField field = 1 [(buf.validate.field).enum.defined_only = true];
+    // Whether to sort in descending order
+    bool desc = 2;
+  }
 
-  // Page token for pagination
-  string page_token = 4;
+  optional bool include_schedules = 3;
 
-  // Whether to include schedules for each source
-  bool include_schedules = 5;
+  // Fields to sort by.
+  repeated Sort sorts = 4;
+
+  // Pagination parameters. Use the same sort fields
+  // and then set this to previous response's pagination
+  // to get the next page or previous page of results.
+  //
+  // Changing sort fields while paginating may lead to
+  // unexpected results.
+  //
+  // If user changes sort fields, client should reset
+  // by using empty tokens.
+  optional Pagination pagination = 5;
 }
 
 // List sources response
 message ListSourcesResponse {
   // List of sources
-  repeated SourceData sources = 1;
-
-  // Associated schedules (if requested, indexed by source ID)
-  map<int64, SourceScheduleList> schedules = 2;
-
-  // Next page token for pagination
-  string next_page_token = 3;
-
-  // Total count of sources (optional)
-  optional int64 total_count = 4;
+  repeated Source sources = 1;
+  Pagination pagination = 2;
 }
 
 // Helper message for schedules in list response

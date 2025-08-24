@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tigorlazuardi/claw/lib/claw/gen/model"
+	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
+	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -22,25 +22,23 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 	nowMillis := types.UnixMilliNow()
 
 	// Insert source
-	sourceStmt := table.Sources.INSERT(
-		table.Sources.Kind,
-		table.Sources.Slug,
-		table.Sources.DisplayName,
-		table.Sources.Parameter,
-		table.Sources.Countback,
-		table.Sources.IsDisabled,
-		table.Sources.CreatedAt,
-		table.Sources.UpdatedAt,
+	sourceStmt := Sources.INSERT(
+		Sources.Kind,
+		Sources.DisplayName,
+		Sources.Parameter,
+		Sources.Countback,
+		Sources.IsDisabled,
+		Sources.CreatedAt,
+		Sources.UpdatedAt,
 	).VALUES(
 		req.Kind,
-		req.Slug,
 		req.DisplayName,
 		req.Parameter,
 		req.Countback,
 		types.Bool(req.IsDisabled),
 		nowMillis,
 		nowMillis,
-	).RETURNING(table.Sources.AllColumns)
+	).RETURNING(Sources.AllColumns)
 
 	var sourceRow model.Sources
 
@@ -52,27 +50,27 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 	// Create schedules if provided
 	var schedules []*clawv1.SourceSchedule
 	if len(req.Schedules) > 0 {
+		var entries []model.Schedules
 		for _, scheduleStr := range req.Schedules {
-			scheduleStmt := table.Schedules.INSERT(
-				table.Schedules.SourceID,
-				table.Schedules.Schedule,
-				table.Schedules.CreatedAt,
-			).VALUES(
-				sourceRow.ID,
-				scheduleStr,
-				nowMillis,
-			).RETURNING(table.Schedules.AllColumns)
+			entries = append(entries, model.Schedules{
+				SourceID:  *sourceRow.ID,
+				Schedule:  scheduleStr,
+				CreatedAt: nowMillis,
+			})
+		}
+		insert := Schedules.
+			INSERT(Schedules.SourceID, Schedules.Schedule, Schedules.CreatedAt).
+			MODELS(entries).
+			RETURNING(Schedules.AllColumns)
 
-			var scheduleRow model.Schedules
+		var out []model.Schedules
+		err := insert.QueryContext(ctx, tx, &out)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create schedules: %w", err)
+		}
 
-			err = scheduleStmt.QueryContext(ctx, tx, &scheduleRow)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create schedule: %w", err)
-			}
-
+		for _, scheduleRow := range out {
 			schedules = append(schedules, &clawv1.SourceSchedule{
-				Id:        *scheduleRow.ID,
-				SourceId:  scheduleRow.SourceID,
 				Schedule:  scheduleRow.Schedule,
 				CreatedAt: scheduleRow.CreatedAt.ToProto(),
 			})
@@ -89,10 +87,8 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 		lastRunAt = sourceRow.LastRunAt.ToProto()
 	}
 
-	source := &clawv1.SourceData{
-		Id:          *sourceRow.ID,
+	source := &clawv1.Source{
 		Kind:        sourceRow.Kind,
-		Slug:        sourceRow.Slug,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   int32(sourceRow.Countback),
@@ -100,6 +96,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 		LastRunAt:   lastRunAt,
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
 		UpdatedAt:   sourceRow.UpdatedAt.ToProto(),
+		Schedules:   schedules,
 	}
 
 	return &clawv1.CreateSourceResponse{

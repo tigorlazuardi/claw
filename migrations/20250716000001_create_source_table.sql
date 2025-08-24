@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS sources (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     kind TEXT NOT NULL,
-    slug TEXT NOT NULL,
     display_name TEXT NOT NULL,
     parameter TEXT NOT NULL,
     countback INTEGER NOT NULL DEFAULT 0,
@@ -22,9 +21,7 @@ CREATE TABLE IF NOT EXISTS schedules (
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_sources_slug ON sources(slug);
 CREATE INDEX IF NOT EXISTS idx_sources_last_run_at ON sources(last_run_at);
-CREATE INDEX IF NOT EXISTS idx_sources_slug_parameter ON sources(slug, parameter);
 
 -- +goose Down
 DROP TABLE IF EXISTS schedules;

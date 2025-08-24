@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-jet/jet/v2/sqlite"
+	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 )
 
@@ -21,9 +21,6 @@ func (s *Claw) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest
 
 	if req.Kind != nil {
 		updateStmt = updateStmt.SET(table.Sources.Kind.SET(sqlite.String(*req.Kind)))
-	}
-	if req.Slug != nil {
-		updateStmt = updateStmt.SET(table.Sources.Slug.SET(sqlite.String(*req.Slug)))
 	}
 	if req.DisplayName != nil {
 		updateStmt = updateStmt.SET(table.Sources.DisplayName.SET(sqlite.String(*req.DisplayName)))
@@ -66,4 +63,3 @@ func (s *Claw) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest
 
 	return &clawv1.UpdateSourceResponse{Source: getResp.Source}, nil
 }
-

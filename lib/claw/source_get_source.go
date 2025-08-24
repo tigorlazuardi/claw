@@ -6,31 +6,25 @@ import (
 	"fmt"
 
 	"github.com/go-jet/jet/v2/sqlite"
+	. "github.com/go-jet/jet/v2/sqlite"
+	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
+	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
-	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetSource retrieves a source by ID
 func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*clawv1.GetSourceResponse, error) {
-	// Get source
-	sourceStmt := sqlite.SELECT(table.Sources.AllColumns).
-		FROM(table.Sources).
-		WHERE(table.Sources.ID.EQ(sqlite.Int64(req.Id)))
-
-	var sourceRow struct {
-		ID          int64 `sql:"primary_key"`
-		Kind        string
-		Slug        string
-		DisplayName string
-		Parameter   string
-		Countback   int32
-		IsDisabled  types.Bool
-		LastRunAt   *types.UnixMilli
-		CreatedAt   types.UnixMilli
-		UpdatedAt   types.UnixMilli
+	var from ReadableTable = Sources
+	if req.GetIncludeSchedules() {
+		from = Sources.LEFT_JOIN(Schedules, Sources.ID.EQ(Schedules.SourceID))
 	}
+	// Get source
+	sourceStmt := sqlite.SELECT(Sources.AllColumns).
+		FROM(from).
+		WHERE(Sources.ID.EQ(sqlite.Int64(req.Id)))
+
+	var sourceRow model.Sources
 
 	err := sourceStmt.QueryContext(ctx, s.db, &sourceRow)
 	if err != nil {
@@ -46,13 +40,11 @@ func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*cl
 		lastRunAt = sourceRow.LastRunAt.ToProto()
 	}
 
-	source := &clawv1.SourceData{
-		Id:          sourceRow.ID,
+	source := &clawv1.Source{
 		Kind:        sourceRow.Kind,
-		Slug:        sourceRow.Slug,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
-		Countback:   sourceRow.Countback,
+		Countback:   int32(sourceRow.Countback),
 		IsDisabled:  bool(sourceRow.IsDisabled),
 		LastRunAt:   lastRunAt,
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
@@ -62,18 +54,12 @@ func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*cl
 	response := &clawv1.GetSourceResponse{Source: source}
 
 	// Get schedules if requested
-	if req.IncludeSchedules {
-		schedulesStmt := sqlite.SELECT(table.Schedules.AllColumns).
-			FROM(table.Schedules).
-			WHERE(table.Schedules.SourceID.EQ(sqlite.Int64(req.Id)))
+	if req.GetIncludeSchedules() {
+		schedulesStmt := sqlite.SELECT(Schedules.AllColumns).
+			FROM(Schedules).
+			WHERE(Schedules.SourceID.EQ(sqlite.Int64(int64(*sourceRow.ID))))
 
-		var scheduleRows []struct {
-			ID        int64 `sql:"primary_key"`
-			SourceID  int64
-			Schedule  string
-			CreatedAt types.UnixMilli
-			UpdatedAt types.UnixMilli
-		}
+		var scheduleRows []model.Schedules
 
 		err = schedulesStmt.QueryContext(ctx, s.db, &scheduleRows)
 		if err != nil {
@@ -82,15 +68,12 @@ func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*cl
 
 		for _, row := range scheduleRows {
 			response.Schedules = append(response.Schedules, &clawv1.SourceSchedule{
-				Id:        row.ID,
-				SourceId:  row.SourceID,
+				Id:        int64(*row.ID),
 				Schedule:  row.Schedule,
 				CreatedAt: row.CreatedAt.ToProto(),
-				UpdatedAt: row.UpdatedAt.ToProto(),
 			})
 		}
 	}
 
 	return response, nil
 }
-

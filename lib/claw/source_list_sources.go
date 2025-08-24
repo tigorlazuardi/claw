@@ -3,130 +3,136 @@ package claw
 import (
 	"context"
 	"fmt"
-	"strconv"
 
-	"github.com/go-jet/jet/v2/sqlite"
+	. "github.com/go-jet/jet/v2/sqlite"
+	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
+	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/gen/table"
-	"github.com/tigorlazuardi/claw/lib/claw/types"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ListSources lists sources with optional filtering and cursor-based pagination
 func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) (*clawv1.ListSourcesResponse, error) {
-	// Build query with optional filters
-	query := sqlite.SELECT(table.Sources.AllColumns).FROM(table.Sources)
+	cond := Bool(true)
 
 	if req.Kind != nil {
-		query = query.WHERE(table.Sources.Kind.EQ(sqlite.String(*req.Kind)))
+		cond.AND(Sources.Kind.EQ(String(*req.Kind)))
 	}
-	if req.Slug != nil {
-		query = query.WHERE(table.Sources.Slug.EQ(sqlite.String(*req.Slug)))
+	if search := req.GetSearch(); search != "" {
+		searchTerm := String("%" + search + "%")
+		cond.AND(
+			Sources.Kind.LIKE(searchTerm).
+				OR(Sources.DisplayName.LIKE(searchTerm)),
+		)
 	}
 
 	// Handle cursor pagination
-	if req.PageToken != "" {
-		cursorID, err := strconv.ParseInt(req.PageToken, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid page token: %w", err)
+	if req.Pagination != nil {
+		if token := req.Pagination.GetNextToken(); token != 0 {
+			cond.AND(Sources.ID.GT(Int64(int64(token))))
 		}
-		query = query.WHERE(table.Sources.ID.GT(sqlite.Int64(cursorID)))
+		if token := req.Pagination.GetPrevToken(); token != 0 {
+			cond.AND(Sources.ID.LT(Int64(int64(token))))
+		}
 	}
 
-	// Always sort by ID for consistent pagination and add limit + 1 to check if there's a next page
-	query = query.ORDER_BY(table.Sources.ID.ASC()).LIMIT(int64(req.PageSize + 1))
+	sorts := make([]OrderByClause, 0, len(req.Sorts)+1)
+	for _, sort := range req.Sorts {
+		var col OrderByClause
+		switch sort.Field {
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_KIND:
+			col = toOrderByClause(Sources.Kind, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_DISPLAY_NAME:
+			col = toOrderByClause(Sources.DisplayName, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_COUNTBACK:
+			col = toOrderByClause(Sources.Countback, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_IS_DISABLED:
+			col = toOrderByClause(Sources.IsDisabled, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_LAST_RUN_AT:
+			col = toOrderByClause(Sources.LastRunAt, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_CREATED_AT:
+			col = toOrderByClause(Sources.CreatedAt, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_UPDATED_AT:
+			col = toOrderByClause(Sources.UpdatedAt, sort.Desc)
+		default:
+			continue
+		}
+		sorts = append(sorts, col)
+	}
+	sorts = append(sorts, Sources.ID.ASC()) // Always add ID as the last sort for consistent ordering
 
-	var sourceRows []struct {
-		ID          int64 `sql:"primary_key"`
-		Kind        string
-		Slug        string
-		DisplayName string
-		Parameter   string
-		Countback   int32
-		IsDisabled  types.Bool
-		LastRunAt   *types.UnixMilli
-		CreatedAt   types.UnixMilli
-		UpdatedAt   types.UnixMilli
+	limit := uint32(25)
+	if req.Pagination != nil && req.Pagination.GetSize() != 0 {
+		limit = Clamp(req.Pagination.GetSize(), 1, 100)
 	}
 
-	err := query.QueryContext(ctx, s.db, &sourceRows)
+	var from ReadableTable = Sources
+	if req.GetIncludeSchedules() {
+		from = Sources.LEFT_JOIN(Schedules, Sources.ID.EQ(Schedules.SourceID))
+	}
+
+	query := SELECT(Sources.AllColumns).
+		FROM(from).
+		WHERE(cond).
+		ORDER_BY(sorts...).
+		LIMIT(int64(limit))
+
+	var rows []struct {
+		model.Sources
+		Schedules []model.Schedules
+	}
+	err := query.QueryContext(ctx, s.db, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sources: %w", err)
 	}
-
-	// Check if there are more results and set next page token
-	var nextPageToken string
-	hasMore := len(sourceRows) > int(req.PageSize)
-	if hasMore {
-		// Remove the extra row we fetched for pagination check
-		sourceRows = sourceRows[:req.PageSize]
-		// Next page token is the ID of the last item in current page
-		nextPageToken = strconv.FormatInt(sourceRows[len(sourceRows)-1].ID, 10)
+	if len(rows) == 0 {
+		return &clawv1.ListSourcesResponse{
+			Sources: []*clawv1.Source{},
+			Pagination: &clawv1.Pagination{
+				Size: &limit,
+			},
+		}, nil
 	}
 
+	// Check if there are more results and set next page token
+	var nextPageToken, prevPageToken uint32
+
+	if len(rows) >= int(limit) {
+		firstRow, lastRow := rows[0], rows[len(rows)-1]
+		nextPageToken = uint32(*lastRow.ID)
+		prevPageToken = uint32(*firstRow.ID)
+	}
 	// Convert to protobuf
-	var sources []*clawv1.SourceData
-	schedulesMap := make(map[int64]*clawv1.SourceScheduleList)
-
-	for _, row := range sourceRows {
-		var lastRunAt *timestamppb.Timestamp
-		if row.LastRunAt != nil {
-			lastRunAt = row.LastRunAt.ToProto()
-		}
-
-		source := &clawv1.SourceData{
-			Id:          row.ID,
+	sources := make([]*clawv1.Source, 0, len(rows))
+	for _, row := range rows {
+		source := &clawv1.Source{
+			Id:          int64(*row.ID),
 			Kind:        row.Kind,
-			Slug:        row.Slug,
 			DisplayName: row.DisplayName,
 			Parameter:   row.Parameter,
-			Countback:   row.Countback,
-			IsDisabled:  bool(row.IsDisabled),
-			LastRunAt:   lastRunAt,
+			Countback:   int32(row.Countback),
+			IsDisabled:  row.IsDisabled.Bool(),
 			CreatedAt:   row.CreatedAt.ToProto(),
 			UpdatedAt:   row.UpdatedAt.ToProto(),
+			Schedules:   make([]*clawv1.SourceSchedule, 0, len(row.Schedules)),
+		}
+		for _, sched := range row.Schedules {
+			source.Schedules = append(source.Schedules, &clawv1.SourceSchedule{
+				Id:        int64(*sched.ID),
+				Schedule:  sched.Schedule,
+				CreatedAt: sched.CreatedAt.ToProto(),
+			})
 		}
 		sources = append(sources, source)
-
-		// Get schedules if requested
-		if req.IncludeSchedules {
-			schedulesStmt := sqlite.SELECT(table.Schedules.AllColumns).
-				FROM(table.Schedules).
-				WHERE(table.Schedules.SourceID.EQ(sqlite.Int64(row.ID)))
-
-			var scheduleRows []struct {
-				ID        int64 `sql:"primary_key"`
-				SourceID  int64
-				Schedule  string
-				CreatedAt types.UnixMilli
-				UpdatedAt types.UnixMilli
-			}
-
-			err = schedulesStmt.QueryContext(ctx, s.db, &scheduleRows)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get schedules for source %d: %w", row.ID, err)
-			}
-
-			var schedules []*clawv1.SourceSchedule
-			for _, scheduleRow := range scheduleRows {
-				schedules = append(schedules, &clawv1.SourceSchedule{
-					Id:        scheduleRow.ID,
-					SourceId:  scheduleRow.SourceID,
-					Schedule:  scheduleRow.Schedule,
-					CreatedAt: scheduleRow.CreatedAt.ToProto(),
-					UpdatedAt: scheduleRow.UpdatedAt.ToProto(),
-				})
-			}
-			schedulesMap[row.ID] = &clawv1.SourceScheduleList{Schedules: schedules}
-		}
 	}
 
 	response := &clawv1.ListSourcesResponse{
-		Sources:       sources,
-		Schedules:     schedulesMap,
-		NextPageToken: nextPageToken,
+		Sources: sources,
+		Pagination: &clawv1.Pagination{
+			Size:      &limit,
+			NextToken: &nextPageToken,
+			PrevToken: &prevPageToken,
+		},
 	}
 
 	return response, nil
 }
-
