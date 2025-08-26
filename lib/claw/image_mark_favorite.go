@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	. "github.com/go-jet/jet/v2/sqlite"
+	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
 	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
@@ -31,25 +32,16 @@ func (s *Claw) MarkFavorite(ctx context.Context, req *clawv1.MarkFavoriteRequest
 	for _, id := range req.ImageIds {
 		idExprs = append(idExprs, Int64(id))
 	}
-
-	// Determine favorite value
-	favoriteValue := 0
-	if req.IsFavorite {
-		favoriteValue = 1
-	}
-
-	// Update favorite status
-	result, err := Images.UPDATE().
-		SET(
-			Images.IsFavorite.SET(Int32(int32(favoriteValue))),
-			Images.UpdatedAt.SET(nowMillis.AsSqlLiteral()),
-		).
+	result, err := Images.UPDATE(Images.IsFavorite, Images.UpdatedAt).
+		MODEL(model.Images{
+			IsFavorite: types.NewBool(req.IsFavorite),
+			UpdatedAt:  nowMillis,
+		}).
 		WHERE(Images.ID.IN(idExprs...)).
 		ExecContext(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update favorite status: %w", err)
 	}
-
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -63,3 +55,4 @@ func (s *Claw) MarkFavorite(ctx context.Context, req *clawv1.MarkFavoriteRequest
 		UpdatedCount: int32(rowsAffected),
 	}, nil
 }
+

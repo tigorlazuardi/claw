@@ -82,8 +82,8 @@ func (s *Claw) UnsubscribeDevice(ctx context.Context, req *clawv1.UnsubscribeDev
 		ImageMinWidth:         uint32(deviceRow.ImageMinWidth),
 		ImageMaxHeight:        uint32(deviceRow.ImageMaxHeight),
 		ImageMaxWidth:         uint32(deviceRow.ImageMaxWidth),
-		ImageMinFilesize:      uint64(deviceRow.ImageMinFileSize),
-		ImageMaxFilesize:      uint64(deviceRow.ImageMaxFileSize),
+		ImageMinFilesize:      uint32(deviceRow.ImageMinFileSize),
+		ImageMaxFilesize:      uint32(deviceRow.ImageMaxFileSize),
 		Nsfw:                  clawv1.NSFWMode(deviceRow.NsfwMode),
 		CreatedAt:             deviceRow.CreatedAt.ToProto(),
 		UpdatedAt:             deviceRow.UpdatedAt.ToProto(),
@@ -94,3 +94,4 @@ func (s *Claw) UnsubscribeDevice(ctx context.Context, req *clawv1.UnsubscribeDev
 		Device: device,
 	}, nil
 }
+

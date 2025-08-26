@@ -59,10 +59,10 @@ message Device {
   uint32 image_max_width = 12 [(buf.validate.field).uint32.gt = 0];
 
   // Minimum image file size in bytes
-  uint64 image_min_filesize = 13 [(buf.validate.field).uint64.gte = 0];
+  uint32 image_min_filesize = 13 [(buf.validate.field).uint32.gte = 0];
 
   // Maximum image file size in bytes
-  uint64 image_max_filesize = 14 [(buf.validate.field).uint64.gt = 0];
+  uint32 image_max_filesize = 14 [(buf.validate.field).uint32.gt = 0];
 
   // NSFW content handling mode
   NSFWMode nsfw = 15;

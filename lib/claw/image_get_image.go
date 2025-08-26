@@ -82,43 +82,24 @@ func (s *Claw) GetImage(ctx context.Context, req *clawv1.GetImageRequest) (*claw
 
 // imageModelToProto converts a database image model to protobuf
 func (s *Claw) imageModelToProto(imageRow model.Images, deviceIDs []int64, paths []string, tags []string) *clawv1.Image {
-	var thumbnailPath *string
-	if imageRow.ThumbnailPath != nil {
-		thumbnailPath = imageRow.ThumbnailPath
-	}
-
-	var postAuthor *string
-	if imageRow.PostAuthor != nil {
-		postAuthor = imageRow.PostAuthor
-	}
-
-	var postAuthorURL *string
-	if imageRow.PostAuthorURL != nil {
-		postAuthorURL = imageRow.PostAuthorURL
-	}
-
-	var postURL *string
-	if imageRow.PostURL != nil {
-		postURL = imageRow.PostURL
-	}
-
 	return &clawv1.Image{
-		Id:             *imageRow.ID,
-		SourceId:       imageRow.SourceID,
-		DeviceIds:      deviceIDs,
-		Paths:          paths,
-		DownloadUrl:    imageRow.DownloadURL,
-		Width:          int32(imageRow.Width),
-		Height:         int32(imageRow.Height),
-		Filesize:       uint32(imageRow.Filesize),
-		ThumbnailPath:  thumbnailPath,
-		ImagePath:      imageRow.ImagePath,
-		PostAuthor:     postAuthor,
-		PostAuthorUrl:  postAuthorURL,
-		PostUrl:        postURL,
-		IsFavorite:     bool(types.Bool(imageRow.IsFavorite)),
-		Tags:           tags,
-		CreatedAt:      imageRow.CreatedAt.ToProto(),
-		UpdatedAt:      imageRow.UpdatedAt.ToProto(),
+		Id:            *imageRow.ID,
+		SourceId:      imageRow.SourceID,
+		DeviceIds:     deviceIDs,
+		Paths:         paths,
+		DownloadUrl:   imageRow.DownloadURL,
+		Width:         int32(imageRow.Width),
+		Height:        int32(imageRow.Height),
+		Filesize:      uint32(imageRow.Filesize),
+		ThumbnailPath: &imageRow.ThumbnailPath,
+		ImagePath:     imageRow.ImagePath,
+		PostAuthor:    &imageRow.PostAuthor,
+		PostAuthorUrl: &imageRow.PostAuthorURL,
+		PostUrl:       &imageRow.PostURL,
+		IsFavorite:    bool(types.Bool(imageRow.IsFavorite)),
+		Tags:          tags,
+		CreatedAt:     imageRow.CreatedAt.ToProto(),
+		UpdatedAt:     imageRow.UpdatedAt.ToProto(),
 	}
 }
+

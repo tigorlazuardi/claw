@@ -99,12 +99,12 @@ message CreateDeviceRequest {
   // Minimum image file size in bytes
   //
   // Set to null or value of 0 to disable validation.
-  optional uint64 image_min_filesize = 12;
+  optional uint32 image_min_filesize = 12;
 
   // Maximum image file size in bytes
   //
   // Set to null or value of 0 to disable validation.
-  optional uint64 image_max_filesize = 13;
+  optional uint32 image_max_filesize = 13;
 
   // NSFW content handling mode
   NSFWMode nsfw = 14;
@@ -167,10 +167,10 @@ message UpdateDeviceRequest {
   optional uint32 image_max_width = 12;
 
   // Updated minimum image file size (optional)
-  optional uint64 image_min_filesize = 13;
+  optional uint32 image_min_filesize = 13;
 
   // Updated maximum image file size (optional)
-  optional uint64 image_max_filesize = 14;
+  optional uint32 image_max_filesize = 14;
 
   // Updated NSFW content handling mode (optional)
   optional NSFWMode nsfw = 15;

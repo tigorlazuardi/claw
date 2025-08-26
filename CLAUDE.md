@@ -195,3 +195,4 @@ go run ./cmd/goose
 - When dealing with protobuf schemas, follow the conventions that buf.build recommends. Run `buf lint` to ensure no warnings or errors occurs.
 - When dealing with probouf schemas, you are allowed to run `buf generate` on `schemas` folder to validate the output or whenever it feels it's required to do so.
 - When creating protos, to avoid CRC errors, make sure the proto files are under `schemas/claw/v1` and the packages have prefix of `claw.v1` to follow the buf build guideline. All proto files dedicated to this project is under that one folder, so make sure to use proper name prefixes or suffixes for messages, services, etc to keep unique.
+- When creating UPDATE or INSERT Queries prefer to use MODEL or MODELS instead of Set api

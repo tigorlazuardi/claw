@@ -2,8 +2,11 @@ package claw
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"slices"
 
+	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
 	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
@@ -20,84 +23,58 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 
 	nowMillis := types.UnixMilliNow()
 
-	// Convert proto values to model types
-	name := ""
-	if req.Name != nil {
-		name = *req.Name
-	}
-
-	saveDir := ""
-	if req.SaveDir != nil {
-		saveDir = *req.SaveDir
-	}
-
-	filenameTemplate := ""
-	if req.FilenameTemplate != nil {
-		filenameTemplate = *req.FilenameTemplate
-	}
-
-	minHeight := int64(0)
-	if req.ImageMinHeight != nil {
-		minHeight = int64(*req.ImageMinHeight)
-	}
-
-	maxHeight := int64(0)
-	if req.ImageMaxHeight != nil {
-		maxHeight = int64(*req.ImageMaxHeight)
-	}
-
-	minWidth := int64(0)
-	if req.ImageMinWidth != nil {
-		minWidth = int64(*req.ImageMinWidth)
-	}
-
-	maxWidth := int64(0)
-	if req.ImageMaxWidth != nil {
-		maxWidth = int64(*req.ImageMaxWidth)
-	}
-
-	minFileSize := int64(0)
-	if req.ImageMinFilesize != nil {
-		minFileSize = int64(*req.ImageMinFilesize)
-	}
-
-	maxFileSize := int64(0)
-	if req.ImageMaxFilesize != nil {
-		maxFileSize = int64(*req.ImageMaxFilesize)
-	}
-
-	// Insert device
-	deviceStmt := Devices.INSERT(
+	columns := ColumnList{
 		Devices.Slug,
-		Devices.Name,
-		Devices.SaveDir,
-		Devices.FilenameTemplate,
 		Devices.Width,
 		Devices.Height,
 		Devices.AspectRatioDifference,
-		Devices.ImageMinWidth,
-		Devices.ImageMaxWidth,
-		Devices.ImageMinHeight,
-		Devices.ImageMaxHeight,
-		Devices.ImageMinFileSize,
-		Devices.ImageMaxFileSize,
 		Devices.NsfwMode,
 		Devices.CreatedAt,
 		Devices.UpdatedAt,
-	).MODEL(model.Devices{
+	}
+	if req.Name != nil {
+		columns = append(columns, Devices.Name)
+	}
+	if req.SaveDir != nil {
+		columns = append(columns, Devices.SaveDir)
+	}
+	if req.FilenameTemplate != nil {
+		columns = append(columns, Devices.FilenameTemplate)
+	}
+	if req.ImageMinHeight != nil {
+		columns = append(columns, Devices.ImageMinHeight)
+	}
+	if req.ImageMaxHeight != nil {
+		columns = append(columns, Devices.ImageMaxHeight)
+	}
+	if req.ImageMinWidth != nil {
+		columns = append(columns, Devices.ImageMinWidth)
+	}
+	if req.ImageMaxWidth != nil {
+		columns = append(columns, Devices.ImageMaxWidth)
+	}
+	if req.ImageMinFilesize != nil {
+		columns = append(columns, Devices.ImageMinFileSize)
+	}
+	if req.ImageMaxFilesize != nil {
+		columns = append(columns, Devices.ImageMaxFileSize)
+	}
+
+	// Insert device
+	deviceStmt := Devices.INSERT(columns).MODEL(model.Devices{
 		Slug:                  req.Slug,
-		Name:                  name,
-		SaveDir:               saveDir,
-		FilenameTemplate:      filenameTemplate,
+		Name:                  Deref(req.Name),
+		SaveDir:               Deref(req.SaveDir),
+		FilenameTemplate:      Deref(req.FilenameTemplate),
 		Width:                 int64(req.Width),
 		Height:                int64(req.Height),
 		AspectRatioDifference: req.AspectRatioDifference,
-		ImageMinWidth:         minWidth,
-		ImageMaxWidth:         maxWidth,
-		ImageMinHeight:        minHeight,
-		ImageMaxHeight:        maxHeight,
-		ImageMinFileSize:      minFileSize,
-		ImageMaxFileSize:      maxFileSize,
+		ImageMinWidth:         int64(Deref(req.ImageMinWidth)),
+		ImageMaxWidth:         int64(Deref(req.ImageMaxWidth)),
+		ImageMinHeight:        int64(Deref(req.ImageMinHeight)),
+		ImageMaxHeight:        int64(Deref(req.ImageMaxHeight)),
+		ImageMinFileSize:      int64(Deref(req.ImageMinFilesize)),
+		ImageMaxFileSize:      int64(Deref(req.ImageMaxFilesize)),
 		NsfwMode:              int64(req.Nsfw),
 		CreatedAt:             nowMillis,
 		UpdatedAt:             nowMillis,
@@ -112,6 +89,9 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 
 	// Create device-source subscriptions if provided
 	if len(req.Subscriptions) > 0 {
+		if err := s.validateSubscriptionExists(ctx, tx, req.Subscriptions); err != nil {
+			return nil, err
+		}
 		var subscriptions []model.DeviceSources
 		for _, sourceID := range req.Subscriptions {
 			subscriptions = append(subscriptions, model.DeviceSources{
@@ -120,7 +100,7 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 				CreatedAt: nowMillis,
 			})
 		}
-		
+
 		subscriptionStmt := DeviceSources.
 			INSERT(DeviceSources.DeviceID, DeviceSources.SourceID, DeviceSources.CreatedAt).
 			MODELS(subscriptions)
@@ -137,27 +117,58 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 
 	// Convert to protobuf
 	device := &clawv1.Device{
-		Id:                      *deviceRow.ID,
-		Slug:                    deviceRow.Slug,
-		Name:                    &deviceRow.Name,
-		Height:                  int32(deviceRow.Height),
-		Width:                   int32(deviceRow.Width),
-		AspectRatioDifference:   deviceRow.AspectRatioDifference,
-		SaveDir:                 deviceRow.SaveDir,
-		FilenameTemplate:        &deviceRow.FilenameTemplate,
-		ImageMinHeight:          uint32(deviceRow.ImageMinHeight),
-		ImageMinWidth:           uint32(deviceRow.ImageMinWidth),
-		ImageMaxHeight:          uint32(deviceRow.ImageMaxHeight),
-		ImageMaxWidth:           uint32(deviceRow.ImageMaxWidth),
-		ImageMinFilesize:        uint64(deviceRow.ImageMinFileSize),
-		ImageMaxFilesize:        uint64(deviceRow.ImageMaxFileSize),
-		Nsfw:                    clawv1.NSFWMode(deviceRow.NsfwMode),
-		CreatedAt:               deviceRow.CreatedAt.ToProto(),
-		UpdatedAt:               deviceRow.UpdatedAt.ToProto(),
-		Subscriptions:           req.Subscriptions, // Return the subscriptions that were created
+		Id:                    *deviceRow.ID,
+		Slug:                  deviceRow.Slug,
+		Name:                  &deviceRow.Name,
+		Height:                int32(deviceRow.Height),
+		Width:                 int32(deviceRow.Width),
+		AspectRatioDifference: deviceRow.AspectRatioDifference,
+		SaveDir:               deviceRow.SaveDir,
+		FilenameTemplate:      &deviceRow.FilenameTemplate,
+		ImageMinHeight:        uint32(deviceRow.ImageMinHeight),
+		ImageMinWidth:         uint32(deviceRow.ImageMinWidth),
+		ImageMaxHeight:        uint32(deviceRow.ImageMaxHeight),
+		ImageMaxWidth:         uint32(deviceRow.ImageMaxWidth),
+		ImageMinFilesize:      uint32(deviceRow.ImageMinFileSize),
+		ImageMaxFilesize:      uint32(deviceRow.ImageMaxFileSize),
+		Nsfw:                  clawv1.NSFWMode(deviceRow.NsfwMode),
+		CreatedAt:             deviceRow.CreatedAt.ToProto(),
+		UpdatedAt:             deviceRow.UpdatedAt.ToProto(),
+		Subscriptions:         req.Subscriptions,
 	}
 
 	return &clawv1.CreateDeviceResponse{
 		Device: device,
 	}, nil
+}
+
+func (claw *Claw) validateSubscriptionExists(ctx context.Context, tx *sql.Tx, sourceIDs []int64) error {
+	if len(sourceIDs) == 0 {
+		return nil
+	}
+	// validate source IDs
+	ids := make([]Expression, len(sourceIDs))
+	for _, sourceID := range sourceIDs {
+		ids = append(ids, Int64(sourceID))
+	}
+	type SourceID struct {
+		ID int64
+	}
+	var out []SourceID
+	err := SELECT(Sources.ID).WHERE(Sources.ID.IN(ids...)).QueryContext(ctx, tx, &out)
+	if err != nil {
+		return fmt.Errorf("failed to validate source IDs: %w", err)
+	}
+	if len(out) != len(sourceIDs) {
+		missingIds := make([]int64, 0, len(out))
+		for i := range out {
+			if !slices.ContainsFunc(out, func(db SourceID) bool {
+				return db.ID == sourceIDs[i]
+			}) {
+				missingIds = append(missingIds, sourceIDs[i])
+			}
+		}
+		return fmt.Errorf("one or more source IDs do not exist in database: %v", missingIds)
+	}
+	return nil
 }

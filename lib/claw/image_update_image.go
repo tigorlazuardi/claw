@@ -21,38 +21,35 @@ func (s *Claw) UpdateImage(ctx context.Context, req *clawv1.UpdateImageRequest) 
 
 	nowMillis := types.UnixMilliNow()
 
-	// Build update statement dynamically based on provided fields
-	updateStmt := Images.UPDATE().SET(Images.UpdatedAt.SET(nowMillis.AsSqlLiteral()))
-
-	// Update post author if provided
+	columns := make([]Column, 0, 5)
 	if req.PostAuthor != nil {
-		updateStmt = updateStmt.SET(Images.PostAuthor.SET(String(*req.PostAuthor)))
+		columns = append(columns, Images.PostAuthor)
 	}
-
-	// Update post author URL if provided
 	if req.PostAuthorUrl != nil {
-		updateStmt = updateStmt.SET(Images.PostAuthorURL.SET(String(*req.PostAuthorUrl)))
+		columns = append(columns, Images.PostAuthorURL)
 	}
-
-	// Update post URL if provided
 	if req.PostUrl != nil {
-		updateStmt = updateStmt.SET(Images.PostURL.SET(String(*req.PostUrl)))
+		columns = append(columns, Images.PostURL)
 	}
-
-	// Update favorite status if provided
 	if req.IsFavorite != nil {
-		favoriteValue := 0
-		if *req.IsFavorite {
-			favoriteValue = 1
-		}
-		updateStmt = updateStmt.SET(Images.IsFavorite.SET(Int32(int32(favoriteValue))))
+		columns = append(columns, Images.IsFavorite)
 	}
-
-	// Execute update
-	finalStmt := updateStmt.WHERE(Images.ID.EQ(Int64(req.Id))).RETURNING(Images.AllColumns)
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("no fields to update")
+	}
 
 	var imageRow model.Images
-	err = finalStmt.QueryContext(ctx, tx, &imageRow)
+	err = Images.UPDATE(ColumnList(columns)).MODEL(model.Images{
+		ID:            new(int64),
+		PostAuthor:    Deref(req.PostAuthor),
+		PostAuthorURL: Deref(req.PostAuthorUrl),
+		PostURL:       Deref(req.PostUrl),
+		IsFavorite:    types.NewBoolFromPointer(req.IsFavorite),
+		UpdatedAt:     nowMillis,
+	}).
+		WHERE(Images.ID.EQ(Int64(req.Id))).
+		RETURNING(Images.AllColumns).
+		QueryContext(ctx, tx, &imageRow)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update image: %w", err)
 	}

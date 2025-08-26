@@ -11,10 +11,10 @@ func Clamp[T cmp.Ordered](value, minimum, maximum T) T {
 	return max(minimum, min(value, maximum))
 }
 
-// Defer returns the value pointed to by the given pointer.
+// Deref returns the value pointed to by the given pointer.
 //
 // If the pointer is nil, it returns the zero value of the type T.
-func Defer[T any](value *T) T {
+func Deref[T any](value *T) T {
 	if value == nil {
 		var zero T
 		return zero
@@ -27,4 +27,16 @@ func toOrderByClause(field sqlite.Expression, desc bool) sqlite.OrderByClause {
 		return field.DESC()
 	}
 	return field.ASC()
+}
+
+func jetStringsExpr(str ...string) []sqlite.Expression {
+	exprs := make([]sqlite.Expression, len(str))
+	for i, s := range str {
+		exprs[i] = sqlite.String(s)
+	}
+	return exprs
+}
+
+func Ptr[T any](v T) *T {
+	return &v
 }

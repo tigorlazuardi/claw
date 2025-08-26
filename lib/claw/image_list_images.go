@@ -3,6 +3,7 @@ package claw
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
@@ -13,42 +14,48 @@ import (
 
 // ListImages lists images with optional filtering and pagination
 func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*clawv1.ListImagesResponse, error) {
+	isReversed := req.Pagination != nil && req.Pagination.GetPrevToken() != 0
 	cond := Bool(true)
-	var from ReadableTable = Images
+	var from ReadableTable = Images.
+		INNER_JOIN(ImagePaths, ImagePaths.ImageID.EQ(Images.ID)).
+		INNER_JOIN(ImageTags, ImageTags.ImageID.EQ(Images.ID)).
+		INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID))
 
 	// Search filter
-	if req.Search != nil && *req.Search != "" {
-		searchTerm := "%" + *req.Search + "%"
-		cond.AND(
+	if search := req.GetSearch(); search != "" {
+		searchTerm := "%" + search + "%"
+		cond = cond.AND(
 			Images.PostAuthor.LIKE(String(searchTerm)).
 				OR(Images.PostURL.LIKE(String(searchTerm))).
 				OR(Images.DownloadURL.LIKE(String(searchTerm))).
-				OR(Images.PostAuthor.LIKE(String(searchTerm))),
+				OR(Images.PostAuthor.LIKE(String(searchTerm))).
+				OR(ImageTags.Tag.LIKE(String(searchTerm))),
 		)
 	}
 
 	// Source filter
 	if req.SourceId != nil {
-		cond.AND(Images.SourceID.EQ(Int64(*req.SourceId)))
+		cond = cond.AND(Images.SourceID.EQ(Int64(*req.SourceId)))
 	}
 
-	// Device filter (requires join)
 	if req.DeviceId != nil {
-		from.INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID))
-		cond.AND(ImageDevices.DeviceID.EQ(Int64(*req.DeviceId)))
+		cond = cond.AND(ImageDevices.DeviceID.EQ(Int64(*req.DeviceId)))
 	}
 
-	limit := int64(50)
-	// Favorite filter
-	if req.IsFavorite != nil {
-		cond.AND(Images.IsFavorite.EQ(types.NewBoolFromPointer(req.IsFavorite).Integer()))
+	if len(req.Tags) > 0 {
+		cond = cond.AND(ImageTags.Tag.IN(jetStringsExpr(req.Tags...)...))
 	}
+
+	if req.IsFavorite != nil {
+		cond = cond.AND(Images.IsFavorite.EQ(types.NewBoolFromPointer(req.IsFavorite).Integer()))
+	}
+	limit := int64(50)
 	if req.Pagination != nil {
 		if token := req.Pagination.GetNextToken(); token != 0 {
-			cond.AND(Images.ID.GT(Int64(int64(token))))
+			cond = cond.AND(Images.ID.GT(Int64(int64(token))))
 		}
 		if token := req.Pagination.GetPrevToken(); token != 0 {
-			cond.AND(Images.ID.LT(Int64(int64(token))))
+			cond = cond.AND(Images.ID.LT(Int64(int64(token))))
 		}
 		if size := req.Pagination.GetSize(); size != 0 {
 			limit = Clamp(int64(size), 1, 100)
@@ -83,124 +90,70 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 			continue
 		}
 	}
-	sorts = append(sorts, Images.ID.ASC()) // Tiebreaker
-
-	// Add pagination
-	pageSize := int64(20) // default
-	if req.PageSize != nil && *req.PageSize > 0 {
-		pageSize = int64(*req.PageSize)
+	// Tiebreaker
+	if isReversed {
+		sorts = append(sorts, Images.ID.DESC())
+	} else {
+		sorts = append(sorts, Images.ID.ASC())
 	}
 
-	offset := int64(0)
-	if req.PageToken != nil && *req.PageToken > 0 {
-		offset = int64(*req.PageToken) * pageSize
+	var out []struct {
+		model.Images
+		ImagePaths   []model.ImagePaths
+		ImageDevices []model.ImageDevices
+		ImageTags    []model.ImageTags
 	}
-
-	stmt = stmt.LIMIT(pageSize).OFFSET(offset)
-
-	// Execute query
-	var imageRows []model.Images
-	err := stmt.QueryContext(ctx, s.db, &imageRows)
+	err := SELECT(Images.AllColumns).
+		FROM(from).
+		WHERE(cond).
+		ORDER_BY(sorts...).
+		LIMIT(limit).
+		QueryContext(ctx, s.db, &out)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
-
-	// Get related data for all images
-	images, err := s.enrichImages(ctx, imageRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to enrich images: %w", err)
+	if len(out) == 0 {
+		return &clawv1.ListImagesResponse{
+			Images: []*clawv1.Image{},
+		}, nil
+	}
+	if isReversed {
+		slices.Reverse(out)
+	}
+	hasMore := int64(len(out)) >= limit
+	var nextPageToken, prevPageToken *uint32
+	if hasMore {
+		nextPageToken = Ptr(uint32(*out[len(out)-1].ID))
+		prevPageToken = Ptr(uint32(*out[0].ID))
 	}
 
-	// Calculate next page token
-	var nextPageToken *uint32
-	if len(images) == int(pageSize) {
-		nextToken := uint32(offset/pageSize + 1)
-		nextPageToken = &nextToken
+	// Convert to []clawv1.Image
+	images := make([]*clawv1.Image, len(out))
+	for i, row := range out {
+		deviceIDs := make([]int64, len(row.ImageDevices))
+		for j, device := range row.ImageDevices {
+			deviceIDs[j] = device.DeviceID
+		}
+
+		paths := make([]string, len(row.ImagePaths))
+		for j, path := range row.ImagePaths {
+			paths[j] = path.Path
+		}
+
+		tags := make([]string, len(row.ImageTags))
+		for j, tag := range row.ImageTags {
+			tags[j] = tag.Tag
+		}
+
+		images[i] = s.imageModelToProto(row.Images, deviceIDs, paths, tags)
 	}
 
 	return &clawv1.ListImagesResponse{
-		Images:        images,
-		NextPageToken: nextPageToken,
+		Images: images,
+		Pagination: &clawv1.Pagination{
+			Size:      Ptr(uint32(len(out))),
+			NextToken: nextPageToken,
+			PrevToken: prevPageToken,
+		},
 	}, nil
-}
-
-// enrichImages adds device assignments, paths, and tags to images
-func (s *Claw) enrichImages(ctx context.Context, imageRows []model.Images) ([]*clawv1.Image, error) {
-	if len(imageRows) == 0 {
-		return []*clawv1.Image{}, nil
-	}
-
-	// Get image IDs
-	imageIDs := make([]Expression, len(imageRows))
-	imageIDMap := make(map[int64]model.Images)
-	for i, imageRow := range imageRows {
-		imageIDs[i] = Int64(*imageRow.ID)
-		imageIDMap[*imageRow.ID] = imageRow
-	}
-
-	// Get all device assignments
-	deviceStmt := SELECT(ImageDevices.ImageID, ImageDevices.DeviceID).
-		FROM(ImageDevices).
-		WHERE(ImageDevices.ImageID.IN(imageIDs...))
-
-	var deviceRows []model.ImageDevices
-	err := deviceStmt.QueryContext(ctx, s.db, &deviceRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image devices: %w", err)
-	}
-
-	// Group devices by image ID
-	deviceMap := make(map[int64][]int64)
-	for _, device := range deviceRows {
-		deviceMap[device.ImageID] = append(deviceMap[device.ImageID], device.DeviceID)
-	}
-
-	// Get all paths
-	pathStmt := SELECT(ImagePaths.ImageID, ImagePaths.Path).
-		FROM(ImagePaths).
-		WHERE(ImagePaths.ImageID.IN(imageIDs...))
-
-	var pathRows []model.ImagePaths
-	err = pathStmt.QueryContext(ctx, s.db, &pathRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image paths: %w", err)
-	}
-
-	// Group paths by image ID
-	pathMap := make(map[int64][]string)
-	for _, path := range pathRows {
-		pathMap[path.ImageID] = append(pathMap[path.ImageID], path.Path)
-	}
-
-	// Get all tags
-	tagStmt := SELECT(ImageTags.ImageID, ImageTags.Tag).
-		FROM(ImageTags).
-		WHERE(ImageTags.ImageID.IN(imageIDs...))
-
-	var tagRows []model.ImageTags
-	err = tagStmt.QueryContext(ctx, s.db, &tagRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image tags: %w", err)
-	}
-
-	// Group tags by image ID
-	tagMap := make(map[int64][]string)
-	for _, tag := range tagRows {
-		tagMap[tag.ImageID] = append(tagMap[tag.ImageID], tag.Tag)
-	}
-
-	// Convert to protobuf
-	var images []*clawv1.Image
-	for _, imageRow := range imageRows {
-		imageID := *imageRow.ID
-		image := s.imageModelToProto(
-			imageRow,
-			deviceMap[imageID],
-			pathMap[imageID],
-			tagMap[imageID],
-		)
-		images = append(images, image)
-	}
-
-	return images, nil
 }

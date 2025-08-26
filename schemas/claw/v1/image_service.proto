@@ -70,16 +70,7 @@ message ListImagesResponse {
   // List of images
   repeated Image images = 1;
 
-  // Next page token for pagination
-  optional uint32 next_page_token = 2;
-
-  // Total count of images (optional)
-  optional int64 total_count = 3;
-
-  message Sort {
-    ImageField field = 1 [(buf.validate.field).enum.defined_only = true];
-    bool desc = 2;
-  }
+  Pagination pagination = 2;
 }
 
 // Update image request
@@ -156,4 +147,3 @@ message AssignTagsResponse {
   // Number of images updated
   int32 updated_count = 1;
 }
-
