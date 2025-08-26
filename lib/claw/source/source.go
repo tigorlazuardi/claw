@@ -34,13 +34,22 @@ type Source interface {
 	// AuthorURL returns where the Author can be found or contacted.
 	AuthorURL() string
 
-	// ValidateParameter validates the parameter for the source.
+	// ValidateTransformParameter validates the parameter for the source and transform the parameter if necessary.
+	//
+	// Sources can use this to normalize a parameter and allows more flexible input from the user.
+	//
+	// For example, in source "claw.reddit.v1", the Source accepts the following inputs:
+	//
+	//  - Full URL to a subreddit, e.g. https://reddit.com/r/wallpapers
+	//  - Also accept shorthand expression: r/wallpapers.
+	//  - claw.reddit.v1 also tries to match casing.
+	//  - If parameter is a user (e.g. u/somebody) -> it will be normalized to user/somebody.
 	//
 	// The error message (the .Error() method) must be user friendly and contain all necessary information
 	// to fix the parameter.
 	//
-	// This must return nil if the parameter is valid.
-	ValidateParameter(param string) error
+	// This must return nil error if valid.
+	ValidateTransformParameter(ctx context.Context, param string) (transformed string, err error)
 
 	// Run runs the source to fetch image Metadata based on the given request.
 	//
