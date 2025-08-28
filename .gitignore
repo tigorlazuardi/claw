@@ -3,8 +3,6 @@
 /lib/claw/gen/
 /ui/src/gen/
 
-claw
-
 # Downloaded proto validate files
 /schemas/buf/validate/
 

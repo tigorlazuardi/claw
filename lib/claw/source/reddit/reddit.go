@@ -2,9 +2,11 @@ package reddit
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-
-	"github.com/tigorlazuardi/claw/lib/claw/source"
+	"net/url"
+	"regexp"
+	"strings"
 )
 
 type Doer interface {
@@ -56,6 +58,12 @@ func (re *Reddit) AuthorURL() string {
 	return "https://github.com/tigorlazuardi/claw"
 }
 
+// Define regex patterns for validation
+var (
+	userPattern      = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com/)?(u|user)/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
+	subredditPattern = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com/)?r/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
+)
+
 // ValidateTransformParameter validates the parameter for the source and transform the parameter if necessary.
 //
 // Sources can use this to normalize a parameter and allows more flexible input from the user.
@@ -72,15 +80,100 @@ func (re *Reddit) AuthorURL() string {
 //
 // This must return nil error if valid.
 func (re *Reddit) ValidateTransformParameter(ctx context.Context, param string) (transformed string, err error) {
-	panic("not implemented") // TODO: Implement
+	if param == "" {
+		return "", fmt.Errorf("parameter cannot be empty")
+	}
+
+	// Check if it matches user pattern
+	if matches := userPattern.FindStringSubmatch(param); len(matches) == 3 {
+		username := matches[2]
+		// Normalize user/<user> to u/<user>
+		normalized := "u/" + username
+
+		// Validate against Reddit API and get proper casing
+		return re.validateAndNormalizeCasing(ctx, normalized)
+	}
+
+	// Check if it matches subreddit pattern
+	if matches := subredditPattern.FindStringSubmatch(param); len(matches) == 2 {
+		subreddit := matches[1]
+		normalized := "r/" + subreddit
+
+		// Validate against Reddit API and get proper casing
+		return re.validateAndNormalizeCasing(ctx, normalized)
+	}
+
+	// If no patterns match, return error with helpful message
+	return "", fmt.Errorf("invalid Reddit parameter format. Supported patterns:\n" +
+		"- https://[www.]reddit.com/u/<user>\n" +
+		"- https://[www.]reddit.com/u/<user>.json\n" +
+		"- https://[www.]reddit.com/user/<user>\n" +
+		"- https://[www.]reddit.com/user/<user>.json\n" +
+		"- https://[www.]reddit.com/r/<subreddit>\n" +
+		"- https://[www.]reddit.com/r/<subreddit>.json\n" +
+		"- u/<user>\n" +
+		"- u/<user>.json\n" +
+		"- r/<subreddit>\n" +
+		"- r/<subreddit>.json\n" +
+		"- user/<user> (will be normalized to u/<user>)\n" +
+		"- user/<user>.json (will be normalized to u/<user>)\n" +
+		"\nBracketed means they are optional.",
+	)
 }
 
-// Run runs the source to fetch image Metadata based on the given request.
-//
-// Note that Sources must not download the actual image itself (or only download small part of image to get metadata like dimensions if unavailable in conventional means).
-// Sources must only return the metadata and the download URL as [Image] objects.
-//
-// Claw will handle the downloading after running filters and device assignments.
-func (re *Reddit) Run(ctx context.Context, request source.Request) (source.Response, error) {
-	panic("not implemented") // TODO: Implement
+// validateAndNormalizeCasing validates the parameter against Reddit API and normalizes casing
+func (re *Reddit) validateAndNormalizeCasing(ctx context.Context, param string) (string, error) {
+	// Construct the JSON API URL
+	jsonURL := "https://reddit.com/" + param + ".json"
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "GET", jsonURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set User-Agent header (Reddit requires this)
+	req.Header.Set("User-Agent", "claw/1.0")
+
+	// Make the request
+	resp, err := re.Client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to validate parameter against Reddit API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle redirects by checking the final URL
+	if resp.Request.URL.String() != jsonURL {
+		// Parse the redirected URL to get the proper casing
+		finalURL := resp.Request.URL.String()
+		parsedURL, err := url.Parse(finalURL)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse redirected URL: %w", err)
+		}
+
+		// Extract the path and remove .json suffix if present
+		path := parsedURL.Path
+		path = strings.TrimSuffix(path, ".json")
+		path = strings.TrimSuffix(path, "/")
+
+		// Remove leading slash and return the normalized path
+		strings.TrimPrefix(path, "/")
+
+		return path, nil
+	}
+
+	// Check if the response is successful
+	if resp.StatusCode == 404 {
+		if strings.HasPrefix(param, "u/") {
+			return "", fmt.Errorf("user '%s' not found on Reddit", param[2:])
+		}
+		return "", fmt.Errorf("subreddit '%s' not found on Reddit", param[2:])
+	}
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Reddit API returned status %d for parameter '%s'", resp.StatusCode, param)
+	}
+
+	// If successful and no redirect, return the original normalized parameter
+	return param, nil
 }
