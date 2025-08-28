@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/tigorlazuardi/claw/lib/claw"
-	"github.com/tigorlazuardi/claw/server"
-	"github.com/tigorlazuardi/claw/server/gen/claw/v1/clawv1connect"
+	"github.com/tigorlazuardi/claw/lib/server"
+	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -57,11 +57,25 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Create handlers
 	sourceHandler := server.NewSourceHandler(clawService)
+	deviceHandler := server.NewDeviceHandler(clawService)
+	imageHandler := server.NewImageHandler(clawService)
+	tagHandler := server.NewTagHandler(clawService)
 
 	// Create HTTP mux and register ConnectRPC handlers
 	mux := http.NewServeMux()
-	path, handler := clawv1connect.NewSourceServiceHandler(sourceHandler)
-	mux.Handle(path, handler)
+	
+	// Register all service handlers
+	sourcePath, sourceHandlerHTTP := clawv1connect.NewSourceServiceHandler(sourceHandler)
+	mux.Handle(sourcePath, sourceHandlerHTTP)
+	
+	devicePath, deviceHandlerHTTP := clawv1connect.NewDeviceServiceHandler(deviceHandler)
+	mux.Handle(devicePath, deviceHandlerHTTP)
+	
+	imagePath, imageHandlerHTTP := clawv1connect.NewImageServiceHandler(imageHandler)
+	mux.Handle(imagePath, imageHandlerHTTP)
+	
+	tagPath, tagHandlerHTTP := clawv1connect.NewTagServiceHandler(tagHandler)
+	mux.Handle(tagPath, tagHandlerHTTP)
 
 	// Create HTTP server with h2c support for HTTP/2 over cleartext
 	httpServer := &http.Server{

@@ -12,7 +12,7 @@ plugins:
     opt:
       - paths=source_relative
   - local: protoc-gen-connect-go
-    out: ../server/gen
+    out: ../lib/server/gen
     opt:
       - paths=source_relative
   - local: protoc-gen-es

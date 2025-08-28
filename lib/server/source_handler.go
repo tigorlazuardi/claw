@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/server/gen/claw/v1/clawv1connect"
+	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 )
 
 // SourceHandler implements the ConnectRPC SourceService interface
