@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// JobStatus defines the current state of a job
+enum JobStatus {
+  // Unspecified job status
+  JOB_STATUS_UNSPECIFIED = 0;
+
+  // Job is pending execution
+  JOB_STATUS_PENDING = 1;
+
+  // Job is currently running
+  JOB_STATUS_RUNNING = 2;
+
+  // Job completed successfully
+  JOB_STATUS_COMPLETED = 3;
+
+  // Job failed with an error
+  JOB_STATUS_FAILED = 4;
+
+  // Job was cancelled
+  JOB_STATUS_CANCELLED = 5;
+}
+
+// JobAction defines what action to take on an image for a device
+enum JobAction {
+  // Unspecified job action
+  JOB_ACTION_UNSPECIFIED = 0;
+
+  // Download image to device directory
+  JOB_ACTION_DOWNLOAD = 1;
+
+  // Simply assign image to device without downloading
+  JOB_ACTION_ASSIGN = 2;
+}
+
+// Job represents a background job for processing images
+message Job {
+  // Unique identifier for the job
+  int64 id = 1;
+
+  // Source ID that this job processes
+  int64 source_id = 2;
+
+  // Schedule ID if this job was triggered by a schedule (optional)
+  optional int64 schedule_id = 3;
+
+  // Timestamp when job was created
+  google.protobuf.Timestamp created_at = 4;
+
+  // Timestamp when job execution started (optional)
+  optional google.protobuf.Timestamp run_at = 5;
+
+  // Timestamp when job finished (optional)
+  optional google.protobuf.Timestamp finished_at = 6;
+
+  // Current status of the job
+  JobStatus status = 7;
+
+  // Error message if job failed (optional)
+  optional string error = 8;
+
+  // List of image associations for this job
+  repeated JobImage job_images = 9;
+}
+
+// JobImage represents an image processed by a job for a specific device
+message JobImage {
+  // Unique identifier for the job image association
+  int64 id = 1;
+
+  // Job ID
+  int64 job_id = 2;
+
+  // Image ID
+  int64 image_id = 3;
+
+  // Device ID
+  int64 device_id = 4;
+
+  // Action taken on this image for this device
+  JobAction action = 5;
+
+  // Timestamp when association was created
+  google.protobuf.Timestamp created_at = 6;
+}
+

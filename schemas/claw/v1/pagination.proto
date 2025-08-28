@@ -4,8 +4,6 @@ package claw.v1;
 
 import "buf/validate/validate.proto";
 
-option go_package = "github.com/tigorlazuardi/claw/schemas/claw/v1;clawv1";
-
 // Pagination represents generic pagination parameters for API requests.
 message Pagination {
   option (buf.validate.message).cel = {

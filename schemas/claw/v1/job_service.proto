@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package claw.v1;
+
+import "buf/validate/validate.proto";
+import "claw/v1/job.proto";
+import "claw/v1/pagination.proto";
+
+// JobSortField defines the fields that can be used for sorting jobs
+enum JobSortField {
+  JOB_SORT_FIELD_UNSPECIFIED = 0;
+  JOB_SORT_FIELD_ID = 1;
+  JOB_SORT_FIELD_SOURCE_ID = 2;
+  JOB_SORT_FIELD_SCHEDULE_ID = 3;
+  JOB_SORT_FIELD_CREATED_AT = 4;
+  JOB_SORT_FIELD_RUN_AT = 5;
+  JOB_SORT_FIELD_FINISHED_AT = 6;
+  JOB_SORT_FIELD_STATUS = 7;
+}
+
+// JobService provides operations for managing background jobs
+service JobService {
+  // Create a new job
+  rpc CreateJob(CreateJobRequest) returns (CreateJobResponse);
+
+  // Get a job by ID
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+
+  // Update an existing job
+  rpc UpdateJob(UpdateJobRequest) returns (UpdateJobResponse);
+
+  // Delete jobs by IDs
+  rpc DeleteJobs(DeleteJobsRequest) returns (DeleteJobsResponse);
+
+  // List jobs with optional filtering
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+
+  // Cancel a running job
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+
+  // Retry a failed job
+  rpc RetryJob(RetryJobRequest) returns (RetryJobResponse);
+}
+
+// Create job request
+message CreateJobRequest {
+  // Source ID for the job
+  int64 source_id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Schedule ID if triggered by a schedule (optional)
+  optional int64 schedule_id = 2;
+
+  // Job status
+  JobStatus status = 3;
+
+  // Job images to associate
+  repeated CreateJobImageRequest job_images = 4;
+}
+
+// Create job image request
+message CreateJobImageRequest {
+  // Image ID
+  int64 image_id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Device ID
+  int64 device_id = 2 [(buf.validate.field).int64.gt = 0];
+
+  // Action to take
+  JobAction action = 3 [(buf.validate.field).enum.defined_only = true];
+}
+
+// Create job response
+message CreateJobResponse {
+  // The created job
+  Job job = 1;
+}
+
+// Get job request
+message GetJobRequest {
+  // Job ID to retrieve
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Whether to include job images
+  optional bool include_job_images = 2;
+}
+
+// Get job response
+message GetJobResponse {
+  // The requested job
+  Job job = 1;
+}
+
+// Update job request
+message UpdateJobRequest {
+  // Job ID to update
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+
+  // Updated status (optional)
+  optional JobStatus status = 2;
+
+  // Updated error message (optional)
+  optional string error = 3;
+}
+
+// Update job response
+message UpdateJobResponse {
+  // The updated job
+  Job job = 1;
+}
+
+// Delete jobs request
+message DeleteJobsRequest {
+  // Job IDs to delete
+  repeated int64 ids = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Delete jobs response
+message DeleteJobsResponse {
+  // Number of jobs deleted
+  int32 deleted_count = 1;
+}
+
+// List jobs request
+message ListJobsRequest {
+  // Optional filter by source ID
+  optional int64 source_id = 1;
+
+  // Optional filter by schedule ID
+  optional int64 schedule_id = 2;
+
+  // Optional filter by status
+  optional JobStatus status = 3;
+
+  // Optional filter by device ID (from job images)
+  optional int64 device_id = 4;
+
+  message Sort {
+    // Field to sort by
+    JobSortField field = 1 [(buf.validate.field).enum.defined_only = true];
+    // Whether to sort in descending order
+    bool desc = 2;
+  }
+
+  // Whether to include job images
+  optional bool include_job_images = 5;
+
+  // Fields to sort by
+  repeated Sort sorts = 6;
+
+  // Pagination parameters
+  optional Pagination pagination = 7;
+}
+
+// List jobs response
+message ListJobsResponse {
+  // List of jobs
+  repeated Job jobs = 1;
+
+  // Pagination info
+  Pagination pagination = 2;
+}
+
+// Cancel job request
+message CancelJobRequest {
+  // Job ID to cancel
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Cancel job response
+message CancelJobResponse {
+  // The cancelled job
+  Job job = 1;
+}
+
+// Retry job request
+message RetryJobRequest {
+  // Job ID to retry
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Retry job response
+message RetryJobResponse {
+  // The new job created for retry
+  Job job = 1;
+}
+
