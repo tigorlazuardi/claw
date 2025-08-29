@@ -8,14 +8,14 @@ import "buf/validate/validate.proto";
 message Pagination {
   option (buf.validate.message).cel = {
     id: "exclusive_pagination_tokens"
-    message: "Only one of next_token or prev_token can be set"
-    expression: "!(this.next_token != 0 && this.prev_token != 0)"
+    message: "Only one of next_token or prev_token can be set (one of them must be null / unset)"
+    expression: "!(has(this.next_token) && has(this.prev_token))"
   };
 
-  // size specifies the number of items to return per page.
+  // size specifies the number of items to return per page. If 0 or unset, a default value will be used.
   optional uint32 size = 1;
-  // next_token is used to fetch the next page of results.
+  // next_token is used to fetch the next page of results. Must not be set if prev_token is set.
   optional uint32 next_token = 2;
-  // prev_token is used to fetch the previous page of results.
+  // prev_token is used to fetch the previous page of results. Must not be set if next_token is set.
   optional uint32 prev_token = 3;
 }

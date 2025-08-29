@@ -60,22 +60,26 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	deviceHandler := server.NewDeviceHandler(clawService)
 	imageHandler := server.NewImageHandler(clawService)
 	tagHandler := server.NewTagHandler(clawService)
+	jobHandler := server.NewJobHandler(clawService)
 
 	// Create HTTP mux and register ConnectRPC handlers
 	mux := http.NewServeMux()
-	
+
 	// Register all service handlers
 	sourcePath, sourceHandlerHTTP := clawv1connect.NewSourceServiceHandler(sourceHandler)
 	mux.Handle(sourcePath, sourceHandlerHTTP)
-	
+
 	devicePath, deviceHandlerHTTP := clawv1connect.NewDeviceServiceHandler(deviceHandler)
 	mux.Handle(devicePath, deviceHandlerHTTP)
-	
+
 	imagePath, imageHandlerHTTP := clawv1connect.NewImageServiceHandler(imageHandler)
 	mux.Handle(imagePath, imageHandlerHTTP)
-	
+
 	tagPath, tagHandlerHTTP := clawv1connect.NewTagServiceHandler(tagHandler)
 	mux.Handle(tagPath, tagHandlerHTTP)
+
+	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler)
+	mux.Handle(jobPath, jobHandlerHTTP)
 
 	// Create HTTP server with h2c support for HTTP/2 over cleartext
 	httpServer := &http.Server{
@@ -112,4 +116,3 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	}
 	return nil
 }
-
