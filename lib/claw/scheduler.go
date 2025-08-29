@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
+	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 )
 
 // StartScheduler begins the scheduler event loop
 func (c *Claw) StartScheduler(ctx context.Context) {
-	c.schedulerMutex.Lock()
-	if c.schedulerRunning {
-		c.schedulerMutex.Unlock()
+	if c.schedulerRunning.Load() {
 		return
 	}
-	
+	c.schedulerRunning.Store(true)
+
 	// Initialize channels if not already done
 	if c.jobQueue == nil {
 		c.jobQueue = make(chan *model.Jobs, 100)
@@ -31,19 +30,11 @@ func (c *Claw) StartScheduler(ctx context.Context) {
 	if c.schedulerDoneCh == nil {
 		c.schedulerDoneCh = make(chan struct{})
 	}
-	
-	c.schedulerRunning = true
-	c.schedulerMutex.Unlock()
-	
+
 	defer close(c.schedulerDoneCh)
-	defer func() {
-		c.schedulerMutex.Lock()
-		c.schedulerRunning = false
-		c.schedulerMutex.Unlock()
-	}()
-	
-	if c.Logger != nil {
-		c.Logger.Info("Starting scheduler", "poll_interval", c.schedulerConfig.PollInterval, "max_workers", c.schedulerConfig.MaxWorkers, "download_workers", c.schedulerConfig.DownloadWorkers)
+
+	if c.logger != nil {
+		c.logger.Info("Starting scheduler", "poll_interval", c.schedulerConfig.PollInterval, "max_workers", c.schedulerConfig.MaxWorkers, "download_workers", c.schedulerConfig.DownloadWorkers)
 	}
 
 	// Start job workers
@@ -63,18 +54,18 @@ func (c *Claw) StartScheduler(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			if c.Logger != nil {
-				c.Logger.Info("Scheduler context cancelled, stopping")
+			if c.logger != nil {
+				c.logger.Info("Scheduler context cancelled, stopping")
 			}
 			return
 		case <-c.schedulerStopCh:
-			if c.Logger != nil {
-				c.Logger.Info("Scheduler stop signal received, stopping")
+			if c.logger != nil {
+				c.logger.Info("Scheduler stop signal received, stopping")
 			}
 			return
 		case <-ticker.C:
-			if err := c.pollJobs(ctx); err != nil && c.Logger != nil {
-				c.Logger.Error("Failed to poll jobs", "error", err)
+			if err := c.pollJobs(ctx); err != nil && c.logger != nil {
+				c.logger.Error("Failed to poll jobs", "error", err)
 			}
 		}
 	}
@@ -88,7 +79,7 @@ func (c *Claw) StopScheduler() {
 		return
 	}
 	c.schedulerMutex.RUnlock()
-	
+
 	close(c.schedulerStopCh)
 }
 
@@ -97,7 +88,7 @@ func (c *Claw) WaitScheduler() {
 	c.schedulerMutex.RLock()
 	doneCh := c.schedulerDoneCh
 	c.schedulerMutex.RUnlock()
-	
+
 	if doneCh != nil {
 		<-doneCh
 	}
@@ -131,9 +122,9 @@ func (c *Claw) pollJobs(ctx context.Context) error {
 
 		// Convert proto job back to model for internal processing
 		jobModel := &model.Jobs{
-			ID:       &job.Id,
-			SourceID: job.SourceId,
-			Status:   job.Status.String(),
+			ID:        &job.Id,
+			SourceID:  job.SourceId,
+			Status:    job.Status.String(),
 			CreatedAt: types.NewUnixMilli(job.CreatedAt.AsTime()),
 		}
 		if job.ScheduleId != nil {
@@ -153,19 +144,19 @@ func (c *Claw) pollJobs(ctx context.Context) error {
 
 		// Mark as queued and send to job queue
 		c.queuedJobs[job.Id] = true
-		
+
 		select {
 		case c.jobQueue <- jobModel:
-			if c.Logger != nil {
-				c.Logger.Debug("Queued job", "job_id", job.Id, "source_id", job.SourceId)
+			if c.logger != nil {
+				c.logger.Debug("Queued job", "job_id", job.Id, "source_id", job.SourceId)
 			}
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			// Job queue is full, will try again on next poll
 			delete(c.queuedJobs, job.Id)
-			if c.Logger != nil {
-				c.Logger.Warn("Job queue full, skipping job", "job_id", job.Id)
+			if c.logger != nil {
+				c.logger.Warn("Job queue full, skipping job", "job_id", job.Id)
 			}
 		}
 	}

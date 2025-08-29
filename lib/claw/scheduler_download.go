@@ -21,8 +21,8 @@ import (
 // downloadWorker processes download tasks from the download queue
 func (c *Claw) downloadWorker(ctx context.Context, workerID int) {
 	var logger *slog.Logger
-	if c.Logger != nil {
-		logger = c.Logger.With("worker_id", workerID, "worker_type", "download")
+	if c.logger != nil {
+		logger = c.logger.With("worker_id", workerID, "worker_type", "download")
 		logger.Debug("Starting download worker")
 		defer logger.Debug("Download worker stopped")
 	}
@@ -60,25 +60,25 @@ func (c *Claw) processDownload(ctx context.Context, task downloadTask) error {
 		imageID = *existingImage.ID
 		filename = c.generateFilename(task.image.DownloadURL)
 		imagePath := filepath.Join(c.schedulerConfig.BaseDir, "images", task.sourceName, filename)
-		
+
 		if _, err := os.Stat(imagePath); err == nil {
-			if c.Logger != nil {
-				c.Logger.Debug("Image file already exists, skipping download")
+			if c.logger != nil {
+				c.logger.Debug("Image file already exists, skipping download")
 			}
 			return c.handleExistingImage(ctx, imageID, task, imagePath)
 		}
-		
-		if c.Logger != nil {
-			c.Logger.Debug("Image record exists but file missing, re-downloading")
+
+		if c.logger != nil {
+			c.logger.Debug("Image record exists but file missing, re-downloading")
 		}
 	}
 
 	// Generate unique filename
 	filename = c.generateFilename(task.image.DownloadURL)
-	
+
 	// Download to temporary location
 	tmpPath := filepath.Join(c.schedulerConfig.TmpDir, "claw", filename)
-	if err := os.MkdirAll(filepath.Dir(tmpPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(tmpPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
@@ -89,7 +89,7 @@ func (c *Claw) processDownload(ctx context.Context, task downloadTask) error {
 
 	// Ensure base images directory exists
 	imagesDir := filepath.Join(c.schedulerConfig.BaseDir, "images", task.sourceName)
-	if err := os.MkdirAll(imagesDir, 0755); err != nil {
+	if err := os.MkdirAll(imagesDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create images directory: %w", err)
 	}
 
@@ -197,7 +197,7 @@ func (c *Claw) hardLink(src, dst string) error {
 	if err := os.Link(src, dst); err == nil {
 		return nil
 	}
-	
+
 	// Fall back to copy
 	return c.copyFile(src, dst)
 }
@@ -266,7 +266,7 @@ func (c *Claw) handleExistingImage(ctx context.Context, imageID int64, task down
 func (c *Claw) handleDeviceAssignments(ctx context.Context, imageID int64, task downloadTask, sourcePath string) error {
 	nowMillis := types.UnixMilliNow()
 	filename := filepath.Base(sourcePath)
-	
+
 	for _, device := range task.devices {
 		// Determine save directory
 		saveDir := device.saveDir
@@ -275,7 +275,7 @@ func (c *Claw) handleDeviceAssignments(ctx context.Context, imageID int64, task 
 		}
 
 		// Ensure device directory exists
-		if err := os.MkdirAll(saveDir, 0755); err != nil {
+		if err := os.MkdirAll(saveDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create device directory: %w", err)
 		}
 
@@ -323,3 +323,4 @@ func (c *Claw) handleDeviceAssignments(ctx context.Context, imageID int64, task 
 
 	return nil
 }
+

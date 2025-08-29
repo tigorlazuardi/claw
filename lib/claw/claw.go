@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
@@ -39,28 +40,28 @@ func DefaultSchedulerConfig() SchedulerConfig {
 // Claw provides business logic for managing sources
 type Claw struct {
 	db     *sql.DB
-	Logger *slog.Logger
-	
+	logger *slog.Logger
+
 	// Scheduler fields
-	schedulerConfig     SchedulerConfig
-	sources             map[string]source.Source
-	jobQueue            chan *model.Jobs
-	queuedJobs          map[int64]bool
-	queuedJobsMutex     sync.RWMutex
-	downloadQueue       chan downloadTask
-	schedulerStopCh     chan struct{}
-	schedulerDoneCh     chan struct{}
-	schedulerRunning    bool
-	schedulerMutex      sync.RWMutex
+	schedulerConfig  SchedulerConfig
+	sources          map[string]source.Source
+	jobQueue         chan *model.Jobs
+	queuedJobs       map[int64]bool
+	queuedJobsMutex  sync.RWMutex
+	downloadQueue    chan downloadTask
+	schedulerStopCh  chan struct{}
+	schedulerDoneCh  chan struct{}
+	schedulerRunning atomic.Bool
+	schedulerMutex   sync.RWMutex
 }
 
 // downloadTask represents a single image download task
 type downloadTask struct {
-	jobID       int64
-	sourceID    int64
-	image       source.Image
-	devices     []deviceFilter
-	sourceName  string
+	jobID      int64
+	sourceID   int64
+	image      source.Image
+	devices    []deviceFilter
+	sourceName string
 }
 
 // deviceFilter contains device information for filtering

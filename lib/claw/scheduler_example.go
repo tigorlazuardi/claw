@@ -12,8 +12,8 @@ import (
 // ExampleSchedulerUsage demonstrates how to use the integrated scheduler
 func ExampleSchedulerUsage(claw *Claw) {
 	// Configure logger if not already set
-	if claw.Logger == nil {
-		claw.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	if claw.logger == nil {
+		claw.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
 		}))
 	}
@@ -38,3 +38,4 @@ func ExampleSchedulerUsage(claw *Claw) {
 	// claw.StopScheduler()
 	// claw.WaitScheduler()
 }
+

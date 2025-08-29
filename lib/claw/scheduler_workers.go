@@ -13,8 +13,8 @@ import (
 // jobWorker processes jobs from the job queue
 func (c *Claw) jobWorker(ctx context.Context, workerID int) {
 	var logger *slog.Logger
-	if c.Logger != nil {
-		logger = c.Logger.With("worker_id", workerID, "worker_type", "job")
+	if c.logger != nil {
+		logger = c.logger.With("worker_id", workerID, "worker_type", "job")
 		logger.Debug("Starting job worker")
 		defer logger.Debug("Job worker stopped")
 	}
@@ -27,12 +27,12 @@ func (c *Claw) jobWorker(ctx context.Context, workerID int) {
 			if job.ID == nil {
 				continue
 			}
-			
+
 			if logger != nil {
 				logger = logger.With("job_id", *job.ID)
 				logger.Debug("Processing job")
 			}
-			
+
 			if err := c.processJob(ctx, job); err != nil {
 				if logger != nil {
 					logger.Error("Failed to process job", "error", err)
@@ -43,7 +43,7 @@ func (c *Claw) jobWorker(ctx context.Context, workerID int) {
 					Error:  Ptr(err.Error()),
 				})
 			}
-			
+
 			// Remove from queued jobs regardless of success/failure
 			c.removeFromQueue(*job.ID)
 		}
@@ -88,8 +88,8 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 		Countback: countback,
 	}
 
-	if c.Logger != nil {
-		c.Logger.Debug("Executing source backend", "source_kind", src.Kind, "parameter", src.Parameter, "countback", countback)
+	if c.logger != nil {
+		c.logger.Debug("Executing source backend", "source_kind", src.Kind, "parameter", src.Parameter, "countback", countback)
 	}
 
 	// Execute the source
@@ -98,8 +98,8 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 		return fmt.Errorf("source execution failed: %w", err)
 	}
 
-	if c.Logger != nil {
-		c.Logger.Info("Source execution completed", "images_found", len(resp.Images))
+	if c.logger != nil {
+		c.logger.Info("Source execution completed", "images_found", len(resp.Images))
 	}
 
 	if len(resp.Images) == 0 {
@@ -108,8 +108,8 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 			Id:     *job.ID,
 			Status: clawv1.JobStatus_JOB_STATUS_COMPLETED.Enum(),
 		})
-		if err != nil && c.Logger != nil {
-			c.Logger.Error("Failed to update job status to completed", "error", err)
+		if err != nil && c.logger != nil {
+			c.logger.Error("Failed to update job status to completed", "error", err)
 		}
 		return nil
 	}
@@ -125,8 +125,8 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 		// Filter devices that match this image
 		matchedDevices := c.filterDevicesForImage(img, devices)
 		if len(matchedDevices) == 0 {
-			if c.Logger != nil {
-				c.Logger.Debug("No devices match image, skipping", "download_url", img.DownloadURL)
+			if c.logger != nil {
+				c.logger.Debug("No devices match image, skipping", "download_url", img.DownloadURL)
 			}
 			continue
 		}
@@ -142,8 +142,8 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 
 		select {
 		case c.downloadQueue <- task:
-			if c.Logger != nil {
-				c.Logger.Debug("Queued image for download", "download_url", img.DownloadURL, "matched_devices", len(matchedDevices))
+			if c.logger != nil {
+				c.logger.Debug("Queued image for download", "download_url", img.DownloadURL, "matched_devices", len(matchedDevices))
 			}
 		case <-ctx.Done():
 			return ctx.Err()
@@ -155,9 +155,10 @@ func (c *Claw) processJob(ctx context.Context, job *model.Jobs) error {
 		Id:     *job.ID,
 		Status: clawv1.JobStatus_JOB_STATUS_COMPLETED.Enum(),
 	})
-	if err != nil && c.Logger != nil {
-		c.Logger.Error("Failed to update job status to completed", "error", err)
+	if err != nil && c.logger != nil {
+		c.logger.Error("Failed to update job status to completed", "error", err)
 	}
 
 	return nil
 }
+
