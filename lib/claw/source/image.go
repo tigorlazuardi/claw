@@ -22,6 +22,9 @@ type Image struct {
 	ThumbnailURL string
 	// When the image was posted or uploaded. Optional.
 	PostedAt time.Time
+
+	// Whether the image is Not Safe For Work (NSFW).
+	NSFW bool
 }
 
 type Images []Image

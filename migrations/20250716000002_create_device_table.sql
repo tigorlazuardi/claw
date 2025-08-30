@@ -1,6 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS devices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    is_enabled INTEGER NOT NULL DEFAULT 1,
     name TEXT NOT NULL DEFAULT '',
     slug TEXT NOT NULL UNIQUE,
     save_dir TEXT NOT NULL DEFAULT '',
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS device_sources (
 CREATE INDEX IF NOT EXISTS idx_devices_name ON devices(name);
 CREATE INDEX IF NOT EXISTS idx_devices_slug ON devices(slug);
 CREATE INDEX IF NOT EXISTS idx_devices_nsfw_mode ON devices(nsfw_mode);
+CREATE INDEX IF NOT EXISTS idx_devices_is_enabled ON devices(is_enabled);
 CREATE INDEX IF NOT EXISTS idx_device_sources_device_id ON device_sources(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_sources_source_id ON device_sources(source_id);
 

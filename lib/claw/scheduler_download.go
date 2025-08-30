@@ -323,4 +323,3 @@ func (c *Claw) handleDeviceAssignments(ctx context.Context, imageID int64, task 
 
 	return nil
 }
-

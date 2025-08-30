@@ -11,6 +11,9 @@ type Scheduler struct {
 	MaxWorkers int `koanf:"max_workers"`
 	// DownloadWorkers is the number of concurrent download workers (default: 5)
 	DownloadWorkers int `koanf:"download_workers"`
+
+	// ExitTimeout is the time to wait for workers to finish when shutting down (default: 10 seconds).
+	ExitTimeout time.Duration `koanf:"exit_timeout"`
 }
 
 func DefaultScheduler() Scheduler {
@@ -18,5 +21,6 @@ func DefaultScheduler() Scheduler {
 		PollInterval:    5 * time.Second,
 		MaxWorkers:      3,
 		DownloadWorkers: 5,
+		ExitTimeout:     10 * time.Second,
 	}
 }
