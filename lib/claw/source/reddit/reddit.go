@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const SourceName = "claw.reddit.v1"
+
 type Doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
@@ -40,7 +42,7 @@ type Reddit struct {
 // you should also change the name (e.g. bump the version) to avoid
 // compatibility issues.
 func (re Reddit) Name() string {
-	return "claw.reddit.v1"
+	return SourceName
 }
 
 // DisplayName returns the human-readable name for the source.

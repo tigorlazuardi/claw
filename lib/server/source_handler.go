@@ -64,6 +64,15 @@ func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[cl
 	return connect.NewResponse(resp), nil
 }
 
+// ListAvailableSources handles listing available source types
+func (h *SourceHandler) ListAvailableSources(ctx context.Context, req *connect.Request[clawv1.ListAvailableSourcesRequest]) (*connect.Response[clawv1.ListAvailableSourcesResponse], error) {
+	resp, err := h.service.ListAvailableSources(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Ensure SourceHandler implements the SourceServiceHandler interface
 var _ clawv1connect.SourceServiceHandler = (*SourceHandler)(nil)
 

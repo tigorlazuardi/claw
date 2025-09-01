@@ -35,6 +35,9 @@ service SourceService {
 
   // List sources with optional filtering
   rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse);
+
+  // List available source types that can be added
+  rpc ListAvailableSources(ListAvailableSourcesRequest) returns (ListAvailableSourcesResponse);
 }
 
 // Create source request
@@ -166,4 +169,30 @@ message ListSourcesResponse {
 // Helper message for schedules in list response
 message SourceScheduleList {
   repeated SourceSchedule schedules = 1;
+}
+
+// List available sources request
+message ListAvailableSourcesRequest {
+  // No parameters needed - returns all registered source types
+}
+
+// Available source information
+message AvailableSource {
+  // Source kind identifier (e.g., "claw.reddit.v1")
+  string kind = 1;
+  
+  // Human-readable display name
+  string display_name = 2;
+  
+  // Author of the source implementation
+  string author = 3;
+  
+  // URL to author's profile or contact
+  string author_url = 4;
+}
+
+// List available sources response
+message ListAvailableSourcesResponse {
+  // List of available source types
+  repeated AvailableSource sources = 1;
 }

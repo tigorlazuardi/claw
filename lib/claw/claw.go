@@ -3,11 +3,14 @@ package claw
 import (
 	"database/sql"
 	"log/slog"
+	"net/http"
 	"sync"
 
 	"github.com/teivah/broadcast"
 	"github.com/tigorlazuardi/claw/lib/claw/config"
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
+	"github.com/tigorlazuardi/claw/lib/claw/source"
+	"github.com/tigorlazuardi/claw/lib/claw/source/reddit"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -36,6 +39,11 @@ func New(db *sql.DB, config *config.Config) *Claw {
 		wg:             &sync.WaitGroup{},
 		reloadSignal:   broadcast.NewRelay[struct{}](),
 		logger:         cl.logger.With("component", "scheduler"),
+		backends: map[string]source.Source{
+			reddit.SourceName: &reddit.Reddit{
+				Client: http.DefaultClient,
+			},
+		},
 	}
 	return cl
 }

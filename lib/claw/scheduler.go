@@ -245,11 +245,6 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 	})
 }
 
-// TODO: implement actual download and processing logic
-func (scheduler *scheduler) processDownload(ctx context.Context, image source.Image, devices []model.Devices) (err error) {
-	return nil
-}
-
 func (scheduler *scheduler) findDevicesToAssign(ctx context.Context, image source.Image) ([]model.Devices, error) {
 	imageRatio := float64(image.Width) / float64(image.Height)
 	cond := Devices.IsEnabled.EQ(Int(1)).
