@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -21,33 +22,16 @@ import (
 // ServerCommand creates the server CLI command
 func ServerCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "server",
-		Usage: "Start the claw server",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "addr",
-				Usage:   "Server address to listen on",
-				Value:   ":8080",
-				Sources: cli.EnvVars("CLAW_SERVER_ADDR"),
-			},
-			&cli.StringFlag{
-				Name:    "db-path",
-				Usage:   "Path to SQLite database file",
-				Value:   "./claw.db",
-				Sources: cli.EnvVars("CLAW_DB_PATH"),
-			},
-		},
+		Name:   "server",
+		Usage:  "Start the claw server",
 		Action: runServer,
 	}
 }
 
 // runServer starts the HTTP server with ConnectRPC handlers
 func runServer(ctx context.Context, cmd *cli.Command) error {
-	addr := cmd.String("addr")
-	dbPath := cmd.String("db-path")
-
 	// Open database connection
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", cfg.Database.Path)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -82,9 +66,17 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler)
 	mux.Handle(jobPath, jobHandlerHTTP)
 
+	listener := cfg.Server.Host
+	if listener == nil {
+		ln, err := net.Listen("tcp", ":8000")
+		if err != nil {
+			return fmt.Errorf("failed to start listener: %w", err)
+		}
+		listener = &NetListener{Listener: ln}
+	}
+
 	// Create HTTP server with h2c support for HTTP/2 over cleartext
 	httpServer := &http.Server{
-		Addr:    addr,
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
@@ -92,8 +84,18 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Start server in a goroutine
 	go func() {
-		slog.Info("Starting server", "addr", addr)
-		errChan <- httpServer.ListenAndServe()
+		if listener.Addr().Network() == "tcp" {
+			port := listener.Addr().(*net.TCPAddr).Port
+			outgoingAddr, err := net.Dial("udp", "1.1.1.1:53")
+			if err != nil {
+				errChan <- fmt.Errorf("failed to determine outgoing address: %w", err)
+				return
+			}
+			publicIp := outgoingAddr.LocalAddr().(*net.UDPAddr).IP.String()
+			slog.Info(fmt.Sprintf("Server outgoing address: http://%s:%d", publicIp, port))
+		}
+		slog.Info("Server is listening", "address", listener.Addr().String())
+		errChan <- httpServer.Serve(listener)
 	}()
 
 	// Wait for either server error or shutdown signal

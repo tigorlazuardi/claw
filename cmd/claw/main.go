@@ -28,6 +28,10 @@ func main() {
 		Commands: []*cli.Command{
 			internal.ServerCommand(),
 		},
+		Before: internal.Before,
+		Flags: []cli.Flag{
+			internal.ConfigFlag(),
+		},
 	}
 
 	if err := app.Run(ctx, os.Args); err != nil {

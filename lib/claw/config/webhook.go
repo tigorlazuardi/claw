@@ -7,11 +7,11 @@ import (
 )
 
 type Webhooks struct {
-	JobStart             []Webhook `koanf:"job_start"`
-	JobFinished          []Webhook `koanf:"job_finished"`
-	ImageDownloadSuccess []Webhook `koanf:"image_downloaded"`
-	ImageDownloadFailed  []Webhook `koanf:"image_failed"`
-	ImageAssigned        []Webhook `koanf:"image_assigned"`
+	JobStart             []Webhook `koanf:"job_start,omitempty"`
+	JobFinished          []Webhook `koanf:"job_finished,omitempty"`
+	ImageDownloadSuccess []Webhook `koanf:"image_downloaded,omitempty"`
+	ImageDownloadFailed  []Webhook `koanf:"image_failed,omitempty"`
+	ImageAssigned        []Webhook `koanf:"image_assigned,omitempty"`
 }
 
 func (hooks Webhooks) ValidateAndNormalize() error {
