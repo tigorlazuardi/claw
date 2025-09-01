@@ -7,10 +7,13 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/tigorlazuardi/claw/lib/claw"
-	"github.com/tigorlazuardi/claw/lib/claw/config"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/urfave/cli/v3"
@@ -37,8 +40,27 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	}
 	defer db.Close()
 
+	abs, _ := filepath.Abs(cfg.Database.Path)
+	slog.Info("Database connected", "path", abs)
+
 	// Initialize the claw service
-	clawService := claw.New(db, config.DefaultConfig())
+	clawService := claw.New(db, cfg.Claw)
+
+	cfg.OnChange = clawService.RereadConfig
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGUSR1)
+		defer signal.Stop(ch)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ch:
+				slog.Info("received SIGUSR1, reloading configuration")
+				clawService.RereadConfig()
+			}
+		}
+	}()
 
 	// Create handlers
 	sourceHandler := server.NewSourceHandler(clawService)

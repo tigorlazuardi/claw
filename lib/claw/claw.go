@@ -39,3 +39,7 @@ func New(db *sql.DB, config *config.Config) *Claw {
 	}
 	return cl
 }
+
+func (claw *Claw) RereadConfig() {
+	claw.scheduler.reloadSignal.Broadcast(struct{}{})
+}
