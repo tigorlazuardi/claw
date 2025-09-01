@@ -45,7 +45,7 @@
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
               # Go toolchain
-              go
+              go_1_25
 
               # Database tools
               goose
@@ -101,7 +101,7 @@
               mkdir -p artifacts
 
               export GOOSE_DBSTRING="$(pwd)/artifacts/dev.db"
-              export GOROOT="${pkgs.go}/share/go"
+              export GOROOT="${pkgs.go_1_25}/share/go"
               export KITTY_PWD="$(pwd)"
               echo "GOOSE_DBSTRING set to: $GOOSE_DBSTRING"
               echo ""
