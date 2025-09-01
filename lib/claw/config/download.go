@@ -11,26 +11,30 @@ import (
 )
 
 type Download struct {
-	BaseDir      string          `koanf:"base_dir"`
-	TmpDir       string          `koanf:"tmp_dir"`
-	StallMonitor DownloadMonitor `koanf:"stall_monitor"`
+	BaseDir      string       `koanf:"base_dir"`
+	TmpDir       string       `koanf:"tmp_dir"`
+	StallMonitor StallMonitor `koanf:"stall_monitor"`
 }
 
 func DefaultDownload() Download {
 	return Download{
 		BaseDir:      filepath.Join(xdg.UserDirs.Pictures, "claw"),
 		TmpDir:       filepath.Join(os.TempDir(), "claw"),
-		StallMonitor: DefaultDownloadMonitor(),
+		StallMonitor: DefaultStallMonitor(),
 	}
 }
 
-type DownloadMonitor struct {
+type StallMonitor struct {
 	// Enabled indicates whether the download monitor is enabled
 	Enabled bool `koanf:"enabled"`
 	// Speed is the speed threshold (in bytes per second) below which a download is considered stalled.
 	Speed ByteSize `koanf:"threshold_speed"`
-	// Duration is the duration for which the download speed must remain below the threshold before being considered stalled.
-	Duration time.Duration `koanf:"threshold_duration"`
+	// SpeedDuration is the duration for which the download speed must remain below the threshold before being considered stalled.
+	SpeedDuration time.Duration `koanf:"threshold_duration"`
+	// NoDataReceivedDuration is the duration for which no data is received before considering the connection stalled.
+	//
+	// Default: 10 seconds.
+	NoDataReceivedDuration time.Duration `koanf:"no_data_recived_duration"`
 }
 
 type ByteSize uint64
@@ -44,10 +48,18 @@ func (b *ByteSize) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func DefaultDownloadMonitor() DownloadMonitor {
-	return DownloadMonitor{
-		Enabled:  true,
-		Speed:    10 * 1024, // 10 KB/s
-		Duration: 10 * time.Second,
+func (b ByteSize) MarshalText() ([]byte, error) {
+	return []byte(b.String()), nil
+}
+
+func (b ByteSize) String() string {
+	return humanize.Bytes(uint64(b))
+}
+
+func DefaultStallMonitor() StallMonitor {
+	return StallMonitor{
+		Enabled:       true,
+		Speed:         10 * 1024, // 10 KB/s
+		SpeedDuration: 10 * time.Second,
 	}
 }
