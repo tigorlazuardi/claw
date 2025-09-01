@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/tigorlazuardi/claw/lib/claw"
+	"github.com/tigorlazuardi/claw/lib/claw/config"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/urfave/cli/v3"
@@ -53,7 +54,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	defer db.Close()
 
 	// Initialize the claw service
-	clawService := claw.New(db)
+	clawService := claw.New(db, config.DefaultConfig())
 
 	// Create handlers
 	sourceHandler := server.NewSourceHandler(clawService)

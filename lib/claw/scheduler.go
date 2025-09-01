@@ -31,7 +31,7 @@ type scheduler struct {
 	queue          chan model.Jobs
 	imageSemaphore *semaphore.Weighted
 	wg             *sync.WaitGroup
-	reloadSignal   broadcast.Relay[struct{}]
+	reloadSignal   *broadcast.Relay[struct{}]
 	logger         *slog.Logger
 	backends       map[string]source.Source
 }

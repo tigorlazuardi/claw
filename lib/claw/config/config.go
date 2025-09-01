@@ -6,8 +6,8 @@ type Config struct {
 	Webhooks  Webhooks  `koanf:"webhooks"`
 }
 
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() *Config {
+	return &Config{
 		Download:  DefaultDownload(),
 		Scheduler: DefaultScheduler(),
 	}
