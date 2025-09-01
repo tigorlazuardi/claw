@@ -14,7 +14,7 @@ func (claw *Claw) ListAvailableSources(ctx context.Context, req *clawv1.ListAvai
 	// Iterate through all registered backends
 	for _, backend := range claw.scheduler.backends {
 		availableSource := &clawv1.AvailableSource{
-			Kind:        backend.Name(),
+			Name:        backend.Name(),
 			DisplayName: backend.DisplayName(),
 			Author:      backend.Author(),
 			AuthorUrl:   backend.AuthorURL(),

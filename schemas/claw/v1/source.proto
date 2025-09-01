@@ -9,8 +9,8 @@ import "google/protobuf/timestamp.proto";
 message Source {
   int64 id = 1;
 
-  // Kind of source (e.g., "reddit", "booru")
-  string kind = 2 [(buf.validate.field).string.min_len = 1];
+  // Name of source (e.g., "reddit", "booru")
+  string name = 2 [(buf.validate.field).string.min_len = 1];
 
   // Display name for the source
   string display_name = 3 [(buf.validate.field).string.min_len = 1];

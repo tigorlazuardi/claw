@@ -14,13 +14,13 @@ import (
 func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) (*clawv1.ListSourcesResponse, error) {
 	cond := Bool(true)
 
-	if req.Kind != nil {
-		cond.AND(Sources.Kind.EQ(String(*req.Kind)))
+	if req.Name != nil {
+		cond.AND(Sources.Name.EQ(String(*req.Name)))
 	}
 	if search := req.GetSearch(); search != "" {
 		searchTerm := String("%" + search + "%")
 		cond.AND(
-			Sources.Kind.LIKE(searchTerm).
+			Sources.Name.LIKE(searchTerm).
 				OR(Sources.DisplayName.LIKE(searchTerm)),
 		)
 	}
@@ -39,8 +39,8 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 	for _, sort := range req.Sorts {
 		var col OrderByClause
 		switch sort.Field {
-		case clawv1.SourceSortField_SOURCE_SORT_FIELD_KIND:
-			col = toOrderByClause(Sources.Kind, sort.Desc)
+		case clawv1.SourceSortField_SOURCE_SORT_FIELD_NAME:
+			col = toOrderByClause(Sources.Name, sort.Desc)
 		case clawv1.SourceSortField_SOURCE_SORT_FIELD_DISPLAY_NAME:
 			col = toOrderByClause(Sources.DisplayName, sort.Desc)
 		case clawv1.SourceSortField_SOURCE_SORT_FIELD_COUNTBACK:
@@ -106,7 +106,7 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 	for _, row := range rows {
 		source := &clawv1.Source{
 			Id:          int64(*row.ID),
-			Kind:        row.Kind,
+			Name:        row.Name,
 			DisplayName: row.DisplayName,
 			Parameter:   row.Parameter,
 			Countback:   int32(row.Countback),

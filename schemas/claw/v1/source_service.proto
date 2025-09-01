@@ -10,7 +10,7 @@ import "claw/v1/source.proto";
 enum SourceSortField {
   SOURCE_SORT_FIELD_UNSPECIFIED = 0;
   SOURCE_SORT_FIELD_ID = 1;
-  SOURCE_SORT_FIELD_KIND = 2;
+  SOURCE_SORT_FIELD_NAME = 2;
   SOURCE_SORT_FIELD_DISPLAY_NAME = 3;
   SOURCE_SORT_FIELD_COUNTBACK = 4;
   SOURCE_SORT_FIELD_IS_DISABLED = 5;
@@ -42,8 +42,8 @@ service SourceService {
 
 // Create source request
 message CreateSourceRequest {
-  // Kind of source (e.g., "reddit", "booru")
-  string kind = 1 [(buf.validate.field).string.min_len = 1];
+  // Name of source (e.g., "reddit", "booru")
+  string name = 1 [(buf.validate.field).string.min_len = 1];
 
   // Display name for the source
   string display_name = 3 [(buf.validate.field).string.min_len = 1];
@@ -93,8 +93,8 @@ message UpdateSourceRequest {
   // Source UID to update
   int64 id = 1;
 
-  // Updated kind (optional)
-  optional string kind = 2;
+  // Updated name (optional)
+  optional string name = 2;
 
   // Updated display name (optional)
   optional string display_name = 4;
@@ -129,10 +129,10 @@ message DeleteSourceResponse {
 
 // List sources request
 message ListSourcesRequest {
-  // Optional filter by kind
-  optional string kind = 1;
+  // Optional filter by name
+  optional string name = 1;
 
-  // Search term to filter sources by uid, kind, or display name
+  // Search term to filter sources by uid, name, or display name
   optional string search = 2;
 
   message Sort {
@@ -178,8 +178,8 @@ message ListAvailableSourcesRequest {
 
 // Available source information
 message AvailableSource {
-  // Source kind identifier (e.g., "claw.reddit.v1")
-  string kind = 1;
+  // Source name identifier (e.g., "claw.reddit.v1")
+  string name = 1;
   
   // Human-readable display name
   string display_name = 2;

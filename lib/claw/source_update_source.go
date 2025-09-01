@@ -19,8 +19,8 @@ func (s *Claw) UpdateSource(ctx context.Context, req *clawv1.UpdateSourceRequest
 		SET(nowMillis).
 		WHERE(table.Sources.ID.EQ(sqlite.Int64(req.Id)))
 
-	if req.Kind != nil {
-		updateStmt = updateStmt.SET(table.Sources.Kind.SET(sqlite.String(*req.Kind)))
+	if req.Name != nil {
+		updateStmt = updateStmt.SET(table.Sources.Name.SET(sqlite.String(*req.Name)))
 	}
 	if req.DisplayName != nil {
 		updateStmt = updateStmt.SET(table.Sources.DisplayName.SET(sqlite.String(*req.DisplayName)))

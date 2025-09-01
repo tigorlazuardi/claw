@@ -41,7 +41,7 @@ func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*cl
 	}
 
 	source := &clawv1.Source{
-		Kind:        sourceRow.Kind,
+		Name:        sourceRow.Name,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   int32(sourceRow.Countback),

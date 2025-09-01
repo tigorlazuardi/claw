@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS sources (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,
+    name TEXT NOT NULL,
     display_name TEXT NOT NULL,
     parameter TEXT NOT NULL,
     countback INTEGER NOT NULL DEFAULT 0,
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS sources (
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     last_active_at INTEGER, -- Last time an image was downloaded from this source
-    UNIQUE(kind, parameter)
+    UNIQUE(name, parameter)
 );
 
 CREATE TABLE IF NOT EXISTS schedules (

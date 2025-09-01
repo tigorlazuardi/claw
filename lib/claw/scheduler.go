@@ -169,10 +169,10 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 		return
 	}
 
-	backend, ok := scheduler.backends[src.Kind]
+	backend, ok := scheduler.backends[src.Name]
 	if !ok {
-		err = fmt.Errorf("no backend found for source kind: %s", src.Kind)
-		scheduler.logger.ErrorContext(ctx, "failed to get backend for job", "job_id", job, "source_kind", src.Kind, "error", err)
+		err = fmt.Errorf("no backend found for source name: %s", src.Name)
+		scheduler.logger.ErrorContext(ctx, "failed to get backend for job", "job_id", job, "source_name", src.Name, "error", err)
 		scheduler.updateJobStatus(ctx, job, clawv1.JobStatus_JOB_STATUS_FAILED, updateJobStatusAttributes{
 			err:        err,
 			finishedAt: Ptr(types.UnixMilliNow()),
@@ -182,7 +182,7 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 	scheduler.updateJobStatus(ctx, job, clawv1.JobStatus_JOB_STATUS_RUNNING, updateJobStatusAttributes{
 		runAt: Ptr(types.UnixMilliNow()),
 	})
-	scheduler.logger.InfoContext(ctx, "starting job", "job_id", job, "source_id", src.ID, "source_kind", src.Kind)
+	scheduler.logger.InfoContext(ctx, "starting job", "job_id", job, "source_id", src.ID, "source_name", src.Name)
 
 	resp, err := backend.Run(ctx, source.Request{
 		Parameter: src.Parameter,

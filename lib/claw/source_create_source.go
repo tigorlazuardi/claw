@@ -23,7 +23,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 
 	// Insert source
 	sourceStmt := Sources.INSERT(
-		Sources.Kind,
+		Sources.Name,
 		Sources.DisplayName,
 		Sources.Parameter,
 		Sources.Countback,
@@ -31,7 +31,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 		Sources.CreatedAt,
 		Sources.UpdatedAt,
 	).VALUES(
-		req.Kind,
+		req.Name,
 		req.DisplayName,
 		req.Parameter,
 		req.Countback,
@@ -88,7 +88,7 @@ func (s *Claw) CreateSource(ctx context.Context, req *clawv1.CreateSourceRequest
 	}
 
 	source := &clawv1.Source{
-		Kind:        sourceRow.Kind,
+		Name:        sourceRow.Name,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   int32(sourceRow.Countback),
