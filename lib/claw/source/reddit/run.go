@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/tigorlazuardi/claw/lib/claw/source"
 )
 
@@ -28,12 +31,14 @@ type RedditPost struct {
 }
 
 type RedditPostData struct {
+	ID         string  `json:"id"`
 	Title      string  `json:"title"`
 	URL        string  `json:"url"`
 	Author     string  `json:"author"`
 	Permalink  string  `json:"permalink"`
 	CreatedUTC float64 `json:"created_utc"`
 	PostHint   string  `json:"post_hint"`
+	Subreddit  string  `json:"subreddit"`
 	Preview    *struct {
 		Images []struct {
 			Source struct {
@@ -72,7 +77,7 @@ func (re *Reddit) Run(ctx context.Context, request source.Request) (source.Respo
 		}
 
 		// Convert posts to images
-		images := re.filterAndConvertPosts(ctx, posts)
+		images := re.filterAndConvertPosts(ctx, posts, request)
 		allImages = append(allImages, images...)
 
 		// Update countback and next token
@@ -147,7 +152,7 @@ func (re *Reddit) fetchRedditPosts(ctx context.Context, param string, limit int,
 }
 
 // filterAndConvertPosts filters posts for images and converts them to source.Image
-func (re *Reddit) filterAndConvertPosts(ctx context.Context, posts []RedditPostData) source.Images {
+func (re *Reddit) filterAndConvertPosts(ctx context.Context, posts []RedditPostData, request source.Request) source.Images {
 	var images source.Images
 
 	for _, post := range posts {
@@ -156,7 +161,7 @@ func (re *Reddit) filterAndConvertPosts(ctx context.Context, posts []RedditPostD
 			continue
 		}
 
-		image := re.convertPostToImage(post)
+		image := re.convertPostToImage(ctx, post, request)
 		if image != nil {
 			images = append(images, *image)
 		}
@@ -211,13 +216,14 @@ func (re *Reddit) isImagePost(ctx context.Context, post RedditPostData) bool {
 }
 
 // convertPostToImage converts a Reddit post to a source.Image
-func (re *Reddit) convertPostToImage(post RedditPostData) *source.Image {
+func (re *Reddit) convertPostToImage(ctx context.Context, post RedditPostData, request source.Request) *source.Image {
 	image := &source.Image{
 		DownloadURL: post.URL,
 		Author:      post.Author,
 		AuthorURL:   fmt.Sprintf("https://reddit.com/u/%s", post.Author),
 		Website:     fmt.Sprintf("https://reddit.com%s", post.Permalink),
 		PostedAt:    time.Unix(int64(post.CreatedUTC), 0),
+		Filename:    re.generateFilename(ctx, post, request),
 	}
 
 	// Try to get dimensions from preview if available
@@ -235,6 +241,131 @@ func (re *Reddit) convertPostToImage(post RedditPostData) *source.Image {
 	}
 
 	return image
+}
+
+// generateFilename generates a filename for the Reddit post using the format:
+// <parameter>_<post_id>_<detected_image_filename>.<ext>
+func (re *Reddit) generateFilename(ctx context.Context, post RedditPostData, request source.Request) string {
+	// Extract filename from URL
+	imageName := re.extractImageNameFromURL(post.URL)
+	if imageName == "" {
+		imageName = "reddit_image"
+	}
+
+	// Get extension, either from URL or detect via MIME type
+	ext := re.getFileExtension(ctx, post.URL)
+
+	// Generate initial filename
+	filename := fmt.Sprintf("%s_%s_%s%s", request.Parameter, post.ID, imageName, ext)
+
+	// Apply filename length limit
+	maxLength := request.FilenameMaxLength
+	if maxLength <= 0 {
+		maxLength = 100 // Default value
+	}
+
+	if len(filename) > maxLength {
+		// Calculate how much space we need for extension
+		extLen := len(ext)
+		if extLen >= maxLength {
+			// If extension alone is too long, just use the extension
+			return ext[len(ext)-maxLength:]
+		}
+
+		// Truncate the filename part but keep the extension
+		baseLen := maxLength - extLen
+		baseFilename := filename[:len(filename)-extLen]
+		if len(baseFilename) > baseLen {
+			baseFilename = baseFilename[:baseLen]
+		}
+		filename = baseFilename + ext
+	}
+
+	return filename
+}
+
+// extractImageNameFromURL extracts a meaningful name from the image URL
+func (re *Reddit) extractImageNameFromURL(imageURL string) string {
+	// Parse URL to get the path
+	u, err := url.Parse(imageURL)
+	if err != nil {
+		return ""
+	}
+
+	// Get the base filename without extension
+	basename := filepath.Base(u.Path)
+	if basename == "." || basename == "/" {
+		return ""
+	}
+
+	// Remove extension to get just the name
+	name := strings.TrimSuffix(basename, filepath.Ext(basename))
+	
+	// Sanitize the name
+	return re.sanitizeFilename(name)
+}
+
+// getFileExtension gets the file extension from URL or detects it via MIME type
+func (re *Reddit) getFileExtension(ctx context.Context, imageURL string) string {
+	// First try to get extension from URL
+	ext := filepath.Ext(imageURL)
+	if ext != "" {
+		return ext
+	}
+
+	// If no extension in URL, try to detect MIME type by making a partial request
+	return re.detectExtensionFromMIME(ctx, imageURL)
+}
+
+// detectExtensionFromMIME detects file extension by making a HEAD request and checking MIME type
+func (re *Reddit) detectExtensionFromMIME(ctx context.Context, imageURL string) string {
+	// Create a HEAD request to get headers without downloading the full image
+	req, err := http.NewRequestWithContext(ctx, "HEAD", imageURL, nil)
+	if err != nil {
+		return ""
+	}
+
+	req.Header.Set("User-Agent", "claw/1.0")
+
+	resp, err := re.Client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return ""
+	}
+
+	// Get Content-Type header
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		return ""
+	}
+
+	// Use mimetype library to get extension from MIME type
+	mtype := mimetype.Lookup(contentType)
+	if mtype != nil {
+		return mtype.Extension()
+	}
+
+	return ""
+}
+
+// sanitizeFilename removes characters that are not filesystem-safe
+func (re *Reddit) sanitizeFilename(filename string) string {
+	// Replace problematic characters with underscores
+	reg := regexp.MustCompile(`[<>:"/\\|?*\x00-\x1f]`)
+	sanitized := reg.ReplaceAllString(filename, "_")
+	
+	// Remove multiple consecutive underscores and dots
+	reg = regexp.MustCompile(`[_.]{2,}`)
+	sanitized = reg.ReplaceAllString(sanitized, "_")
+	
+	// Trim leading/trailing spaces, dots, and underscores
+	sanitized = strings.Trim(sanitized, " ._")
+	
+	return sanitized
 }
 
 // isImgurURL checks if a URL is from Imgur

@@ -197,3 +197,4 @@ go run ./cmd/goose
 - When creating protos, to avoid CRC errors, make sure the proto files are under `schemas/claw/v1` and the packages have prefix of `claw.v1` to follow the buf build guideline. All proto files dedicated to this project is under that one folder, so make sure to use proper name prefixes or suffixes for messages, services, etc to keep unique.
 - When creating UPDATE or INSERT Queries prefer to use MODEL or MODELS instead of Set api
 - Use testify as test suite
+- Avoid hardcoding values that user may want to change, especially values that are not too technical. Instead put them on config.Config and try to pass them to relevant functions / methods.

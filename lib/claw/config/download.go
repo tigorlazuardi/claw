@@ -11,16 +11,18 @@ import (
 )
 
 type Download struct {
-	BaseDir      string       `koanf:"base_dir"`
-	TmpDir       string       `koanf:"tmp_dir"`
-	StallMonitor StallMonitor `koanf:"stall_monitor"`
+	BaseDir           string       `koanf:"base_dir"`
+	TmpDir            string       `koanf:"tmp_dir"`
+	StallMonitor      StallMonitor `koanf:"stall_monitor"`
+	FilenameMaxLength int          `koanf:"filename_max_length"`
 }
 
 func DefaultDownload() Download {
 	return Download{
-		BaseDir:      filepath.Join(xdg.UserDirs.Pictures, "claw"),
-		TmpDir:       filepath.Join(os.TempDir(), "claw"),
-		StallMonitor: DefaultStallMonitor(),
+		BaseDir:           filepath.Join(xdg.UserDirs.Pictures, "claw"),
+		TmpDir:            filepath.Join(os.TempDir(), "claw"),
+		StallMonitor:      DefaultStallMonitor(),
+		FilenameMaxLength: 100,
 	}
 }
 

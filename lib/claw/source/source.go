@@ -72,6 +72,9 @@ type Request struct {
 	//
 	// If Countback is 0 or negative, the Source should use it's own default value.
 	Countback int
+	// FilenameMaxLength is the maximum allowed length for generated filenames including the extension.
+	// If 0 or negative, the Source should use its own default value.
+	FilenameMaxLength int
 }
 
 type Response struct {

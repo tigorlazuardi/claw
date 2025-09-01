@@ -8,8 +8,12 @@ type Scheduler struct {
 	// PollInterval is how often to poll for new jobs (default: 5 seconds).
 	PollInterval time.Duration `koanf:"poll_interval"`
 	// MaxWorkers is the maximum number of concurrent jobs that can be processed at the same time (default: 3).
+	//
+	// Value is clamped between 1 and 16.
 	MaxWorkers int `koanf:"max_workers"`
 	// DownloadWorkers is the number of concurrent download workers (default: 5)
+	//
+	// Value is clamped between 1 and 16.
 	DownloadWorkers int `koanf:"download_workers"`
 
 	// ExitTimeout is the time to wait for workers to finish when shutting down (default: 10 seconds).
