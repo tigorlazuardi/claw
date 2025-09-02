@@ -15,6 +15,7 @@ type Download struct {
 	TmpDir            string       `koanf:"tmp_dir"`
 	StallMonitor      StallMonitor `koanf:"stall_monitor"`
 	FilenameMaxLength int          `koanf:"filename_max_length"`
+	SanityCheck       SanityCheck  `koanf:"sanity_check"`
 }
 
 func DefaultDownload() Download {
@@ -23,6 +24,7 @@ func DefaultDownload() Download {
 		TmpDir:            filepath.Join(os.TempDir(), "claw"),
 		StallMonitor:      DefaultStallMonitor(),
 		FilenameMaxLength: 100,
+		SanityCheck:       DefaultSanityCheck(),
 	}
 }
 
@@ -63,5 +65,17 @@ func DefaultStallMonitor() StallMonitor {
 		Enabled:       true,
 		Speed:         10 * 1024, // 10 KB/s
 		SpeedDuration: 10 * time.Second,
+	}
+}
+
+type SanityCheck struct {
+	Enabled          bool     `koanf:"enabled"`
+	MinImageFilesize ByteSize `koanf:"image_filesize"`
+}
+
+func DefaultSanityCheck() SanityCheck {
+	return SanityCheck{
+		Enabled:          true,
+		MinImageFilesize: 64 * 1024, // 10 KB
 	}
 }

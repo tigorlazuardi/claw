@@ -228,7 +228,7 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 		go func(image source.Image, devices []model.Devices) {
 			defer wg.Done()
 			defer scheduler.imageSemaphore.Release(weight)
-			if err := scheduler.processDownload(ctx, image, devices); err != nil {
+			if err := scheduler.processDownload(ctx, image, devices, src.Name); err != nil {
 				scheduler.logger.ErrorContext(ctx, "failed to process image", "job_id", job, "image", image, "error", err)
 				return
 			}
