@@ -16,6 +16,6 @@ plugins:
     opt:
       - paths=source_relative
   - local: protoc-gen-es
-    out: ../ui/src/gen
+    out: ../webui/src/gen
     opt:
       - target=ts

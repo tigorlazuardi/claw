@@ -1,7 +1,8 @@
 # Generated code directories
 /lib/server/gen/
 /lib/claw/gen/
-/ui/src/gen/
+/webui/src/gen/
+/cmd/claw/internal/webui
 
 # Downloaded proto validate files
 /schemas/buf/validate/
