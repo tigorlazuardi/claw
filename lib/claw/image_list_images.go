@@ -25,10 +25,10 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 	if search := req.GetSearch(); search != "" {
 		searchTerm := "%" + search + "%"
 		cond = cond.AND(
-			Images.PostAuthor.LIKE(String(searchTerm)).
+			Images.Title.LIKE(String(searchTerm)).
+				OR(Images.PostAuthor.LIKE(String(searchTerm))).
 				OR(Images.PostURL.LIKE(String(searchTerm))).
 				OR(Images.DownloadURL.LIKE(String(searchTerm))).
-				OR(Images.PostAuthor.LIKE(String(searchTerm))).
 				OR(ImageTags.Tag.LIKE(String(searchTerm))),
 		)
 	}
@@ -78,6 +78,8 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 			sorts = append(sorts, toOrderByClause(Images.Filesize, sort.Desc))
 		case clawv1.ImageField_IMAGE_FIELD_HEIGHT:
 			sorts = append(sorts, toOrderByClause(Images.Height, sort.Desc))
+		case clawv1.ImageField_IMAGE_FIELD_TITLE:
+			sorts = append(sorts, toOrderByClause(Images.Title, sort.Desc))
 		case clawv1.ImageField_IMAGE_FIELD_POST_AUTHOR:
 			sorts = append(sorts, toOrderByClause(Images.PostAuthor, sort.Desc))
 		case clawv1.ImageField_IMAGE_FIELD_IS_FAVORITE:

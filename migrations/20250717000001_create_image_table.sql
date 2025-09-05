@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS images (
     filesize INTEGER NOT NULL,
     thumbnail_path TEXT NOT NULL,
     image_path TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
     post_author TEXT NOT NULL DEFAULT '',
     post_author_url TEXT NOT NULL DEFAULT '',
     post_url TEXT NOT NULL DEFAULT '',

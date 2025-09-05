@@ -37,26 +37,29 @@ message Image {
   // Image relative path for client access
   string image_path = 10 [(buf.validate.field).string.min_len = 1];
 
+  // Title or name of the image
+  optional string title = 11;
+
   // Name of the person who posted this image
-  optional string post_author = 11;
+  optional string post_author = 12;
 
   // URL to the poster's profile/webpage
-  optional string post_author_url = 12;
+  optional string post_author_url = 13;
 
   // URL to the original post page
-  optional string post_url = 13;
+  optional string post_url = 14;
 
   // Whether this image is marked as favorite by the user
-  bool is_favorite = 14;
+  bool is_favorite = 15;
 
   // List of tags associated with this image
-  repeated string tags = 15;
+  repeated string tags = 16;
 
   // Timestamp when image was downloaded
-  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp created_at = 17;
 
   // Timestamp when image metadata was last updated
-  google.protobuf.Timestamp updated_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
 }
 
 // ImageField enum for specifying which field to use for operations
@@ -70,11 +73,12 @@ enum ImageField {
   IMAGE_FIELD_FILESIZE = 6;
   IMAGE_FIELD_THUMBNAIL_PATH = 7;
   IMAGE_FIELD_IMAGE_PATH = 8;
-  IMAGE_FIELD_POST_AUTHOR = 9;
-  IMAGE_FIELD_POST_AUTHOR_URL = 10;
-  IMAGE_FIELD_POST_URL = 11;
-  IMAGE_FIELD_IS_FAVORITE = 12;
-  IMAGE_FIELD_CREATED_AT = 13;
-  IMAGE_FIELD_UPDATED_AT = 14;
+  IMAGE_FIELD_TITLE = 9;
+  IMAGE_FIELD_POST_AUTHOR = 10;
+  IMAGE_FIELD_POST_AUTHOR_URL = 11;
+  IMAGE_FIELD_POST_URL = 12;
+  IMAGE_FIELD_IS_FAVORITE = 13;
+  IMAGE_FIELD_CREATED_AT = 14;
+  IMAGE_FIELD_UPDATED_AT = 15;
 }
 

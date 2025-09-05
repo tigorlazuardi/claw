@@ -93,6 +93,7 @@ func (s *Claw) imageModelToProto(imageRow model.Images, deviceIDs []int64, paths
 		Filesize:      uint32(imageRow.Filesize),
 		ThumbnailPath: &imageRow.ThumbnailPath,
 		ImagePath:     imageRow.ImagePath,
+		Title:         &imageRow.Title,
 		PostAuthor:    &imageRow.PostAuthor,
 		PostAuthorUrl: &imageRow.PostAuthorURL,
 		PostUrl:       &imageRow.PostURL,
