@@ -89,6 +89,17 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler)
 	mux.Handle(jobPath, jobHandlerHTTP)
 
+	mux.Handle("/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("pong"))
+	}))
+
+	webuiFragment, err := CreateViteFragment()
+	if err != nil {
+		return fmt.Errorf("failed to create Vite fragment: %w", err)
+	}
+	mux.Handle("/", CreateWebuiHandler(webuiFragment, slog.Default()))
+
 	listener := cfg.Server.Host
 	if listener == nil {
 		ln, err := net.Listen("tcp", ":8000")
@@ -100,7 +111,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Create HTTP server with h2c support for HTTP/2 over cleartext
 	httpServer := &http.Server{
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Handler: stripPrefixHandler(h2c.NewHandler(mux, &http2.Server{})),
 	}
 
 	if err := migrations.Migrate(ctx, db); err != nil {
@@ -126,7 +137,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 			publicIp := outgoingAddr.LocalAddr().(*net.UDPAddr).IP.String()
 			slog.Info(fmt.Sprintf("Server outgoing address: http://%s:%d", publicIp, port))
 		}
-		slog.Info("Server is listening", "address", listener.Addr().String())
+		slog.Info("Server is listening", "address", "http://"+listener.Addr().String())
 		errChan <- httpServer.Serve(listener)
 	}()
 
@@ -151,4 +162,12 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 		slog.Info("Server shutdown complete")
 	}
 	return nil
+}
+
+func stripPrefixHandler(handler http.Handler) http.Handler {
+	if cfg.Server.BaseURL == "" || cfg.Server.BaseURL == "/" {
+		return handler
+	}
+	slog.Info("Serving under base URL", "base_url", cfg.Server.BaseURL)
+	return http.StripPrefix(cfg.Server.BaseURL, handler)
 }

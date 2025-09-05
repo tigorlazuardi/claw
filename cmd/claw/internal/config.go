@@ -19,9 +19,7 @@ import (
 var cfg *CLIConfig
 
 type CLIConfig struct {
-	Server struct {
-		Host *NetListener `koanf:"host"`
-	} `koanf:"server"`
+	Server   ServerConfig `koanf:"server"`
 	Database struct {
 		Path string `koanf:"path"`
 	} `koanf:"database"`
@@ -32,6 +30,26 @@ type CLIConfig struct {
 	Parser       koanf.Parser `koanf:"-"`
 	FileProvider *file.File   `koanf:"-"`
 	OnChange     func()       `koanf:"-"`
+}
+
+type ServerConfig struct {
+	Host    *NetListener `koanf:"host"`
+	BaseURL string       `koanf:"base_url"`
+	// WebUI path to load static files from..
+	// If empty, the web UI will use embedded files.
+	WebUI WebUI `koanf:"webui"`
+}
+
+type WebUI struct {
+	Title string `koanf:"title"`
+	// Path to load static files from.
+	// If empty, the web UI will use embedded files.
+	Path string `koanf:"path"`
+	// Enable development mode.
+	// In development mode, the web UI will proxy requests to the Vite dev server.
+	//
+	// Unless you are developing this application, you should not enable this.
+	DevMode bool `koanf:"dev_mode"`
 }
 
 func defaultCLIConfig() *CLIConfig {
