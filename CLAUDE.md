@@ -198,3 +198,4 @@ go run ./cmd/goose
 - When creating UPDATE or INSERT Queries prefer to use MODEL or MODELS instead of Set api
 - Use testify as test suite
 - Avoid hardcoding values that user may want to change, especially values that are not too technical. Instead put them on config.Config and try to pass them to relevant functions / methods.
+- When editing webui, call npm run build after editing and handle linter warnings given by svelte
