@@ -16,6 +16,7 @@ import (
 	"github.com/tigorlazuardi/claw/lib/claw"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
+	"github.com/tigorlazuardi/claw/migrations"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -102,7 +103,16 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
+	if err := migrations.Migrate(ctx, db); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	errChan := make(chan error, 1)
+	schedulerExit := make(chan struct{}, 1)
+	go func() {
+		clawService.StartSchedculer(ctx)
+		schedulerExit <- struct{}{}
+	}()
 
 	// Start server in a goroutine
 	go func() {
@@ -137,6 +147,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 			slog.Error("Server shutdown failed", "error", err)
 			return err
 		}
+		<-schedulerExit
 		slog.Info("Server shutdown complete")
 	}
 	return nil

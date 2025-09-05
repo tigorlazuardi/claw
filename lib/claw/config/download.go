@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,6 +17,16 @@ type Download struct {
 	StallMonitor      StallMonitor `koanf:"stall_monitor"`
 	FilenameMaxLength int          `koanf:"filename_max_length"`
 	SanityCheck       SanityCheck  `koanf:"sanity_check"`
+}
+
+func (do Download) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("base_dir", do.BaseDir),
+		slog.String("tmp_dir", do.TmpDir),
+		slog.Int("filename_max_length", do.FilenameMaxLength),
+		slog.Any("stall_monitor", do.StallMonitor),
+		slog.Any("sanity_check", do.SanityCheck),
+	)
 }
 
 func DefaultDownload() Download {
@@ -41,7 +52,20 @@ type StallMonitor struct {
 	NoDataReceivedDuration time.Duration `koanf:"no_data_recived_duration"`
 }
 
+func (st StallMonitor) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Bool("enabled", st.Enabled),
+		slog.Any("speed", st.Speed),
+		slog.Duration("speed_duration", st.SpeedDuration),
+		slog.Duration("no_data_received_duration", st.NoDataReceivedDuration),
+	)
+}
+
 type ByteSize uint64
+
+func (by ByteSize) LogValue() slog.Value {
+	return slog.StringValue(by.String())
+}
 
 func (b *ByteSize) UnmarshalText(text []byte) error {
 	size, err := humanize.ParseBytes(string(text))

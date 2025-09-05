@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"time"
 )
 
@@ -18,6 +19,15 @@ type Scheduler struct {
 
 	// ExitTimeout is the time to wait for workers to finish when shutting down (default: 10 seconds).
 	ExitTimeout time.Duration `koanf:"exit_timeout"`
+}
+
+func (sc Scheduler) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Int("max_workers", sc.MaxWorkers),
+		slog.Int("download_workers", sc.DownloadWorkers),
+		slog.Duration("poll_interval", sc.PollInterval),
+		slog.Duration("exit_timeout", sc.ExitTimeout),
+	)
 }
 
 func DefaultScheduler() Scheduler {

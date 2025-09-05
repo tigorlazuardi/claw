@@ -37,6 +37,9 @@ func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
 	if err := cfg.ReadAndWatch(); err != nil {
 		return ctx, fmt.Errorf("failed to read config and watch file: %w", err)
 	}
+	if err := cfg.LoadEnv(); err != nil {
+		return ctx, fmt.Errorf("failed to read environment variable into config: %w", err)
+	}
 	slog.Info("watching config file", "path", cfg.FileLocation)
 	return ctx, nil
 }

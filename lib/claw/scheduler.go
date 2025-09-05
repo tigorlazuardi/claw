@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -23,6 +24,10 @@ import (
 
 const leastCommonMultiple = 720720 // LCM of 1 to 16
 
+type Doer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type scheduler struct {
 	claw           *Claw
 	config         *config.Config
@@ -34,6 +39,7 @@ type scheduler struct {
 	reloadSignal   *broadcast.Relay[struct{}]
 	logger         *slog.Logger
 	backends       map[string]source.Source
+	httpclient     Doer
 }
 
 type imageQueue struct {
@@ -49,7 +55,9 @@ func (scheduler *scheduler) start(baseContext context.Context) {
 	defer scheduler.isRunning.Store(false)
 	go scheduler.startPolling(baseContext)
 	go scheduler.consumeJobQueue(baseContext)
+	scheduler.logger.Info("scheduler started")
 	<-baseContext.Done()
+	scheduler.logger.Info("shutting down scheduler, waiting for running jobs to complete")
 	ctx, cancel := context.WithTimeout(context.Background(), scheduler.config.Scheduler.ExitTimeout)
 	defer cancel()
 	wait := make(chan struct{}, 1)

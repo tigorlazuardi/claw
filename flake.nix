@@ -100,11 +100,12 @@
               # Create artifacts directory if it doesn't exist
               mkdir -p artifacts
 
-              export GOOSE_DBSTRING="$(pwd)/artifacts/dev.db"
+              export GOOSE_DBSTRING="$(pwd)/artifacts/migrate.db"
               export GOROOT="${pkgs.go_1_25}/share/go"
+              export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
               export KITTY_PWD="$(pwd)"
-              echo "GOOSE_DBSTRING set to: $GOOSE_DBSTRING"
-              echo ""
+              echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
+              echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
 
               echo "Run 'go mod tidy' to initialize dependencies"
             '';

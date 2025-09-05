@@ -111,7 +111,7 @@ func (scheduler *scheduler) downloadImageToTemp(ctx context.Context, image sourc
 		return "", fmt.Errorf("failed to create download request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := scheduler.httpclient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to download image: %w", err)
 	}

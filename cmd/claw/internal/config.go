@@ -6,9 +6,11 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/adrg/xdg"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 	"github.com/tigorlazuardi/claw/lib/claw/config"
@@ -40,6 +42,15 @@ func defaultCLIConfig() *CLIConfig {
 	c.FileLocation = filepath.Join(xdg.ConfigHome, "claw", "config.yaml")
 	c.Parser = yaml.Parser()
 	return c
+}
+
+func (c *CLIConfig) LoadEnv() error {
+	c.Koanf.Load(env.Provider("CLAW_", ".", func(s string) string {
+		s = strings.TrimPrefix(s, "CLAW_")
+		s = strings.ToLower(s)
+		return strings.ReplaceAll(s, "__", ".")
+	}), nil)
+	return c.Koanf.Unmarshal("", c)
 }
 
 // ReadAndWatch() sets up a file watcher on the configuration file to reload on changes.
