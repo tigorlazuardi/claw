@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@connectrpc/connect": "^2.1.0",
-    "@connectrpc/connect-web": "^2.1.0"
+    "@connectrpc/connect-web": "^2.1.0",
+    "@dvcol/svelte-simple-router": "^2.7.2"
   }
 }
