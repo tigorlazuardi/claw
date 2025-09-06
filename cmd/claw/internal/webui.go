@@ -2,12 +2,12 @@ package internal
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/olivere/vite"
 )
@@ -26,29 +26,31 @@ var indexTemplate = template.Must(template.New("").Parse( /*html*/
 </body>
 `))
 
-func CreateWebuiHandler(fragment *vite.Fragment, logger *slog.Logger) http.Handler {
-	var files fs.FS
-	if cfg.Server.WebUI.Path == "" {
-		files = embeddedWebUIFS
+type WebUIConfig struct {
+	Fragment *vite.Fragment
+	DistFS   fs.FS
+	Logger   *slog.Logger
+}
+
+func CreateWebuiHandler(config WebUIConfig) http.Handler {
+	fileServer := http.FileServer(http.FS(config.DistFS))
+	mux := http.NewServeMux()
+	if cfg.Server.WebUI.DevMode {
+		fmt.Println("called =========>")
+		mux.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
 	} else {
-		logger.Info("serving web UI from filesystem", "path", cfg.Server.WebUI.Path)
-		files = os.DirFS(cfg.Server.WebUI.Path)
+		mux.Handle("/assets", http.StripPrefix("/assets", fileServer))
 	}
-	fileServer := http.FileServer(http.FS(files))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/assets") {
-			// Serve static assets
-			fileServer.ServeHTTP(w, r)
-			return
-		}
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := indexTemplate.Execute(w, map[string]any{
-			"Vite":  fragment,
+			"Vite":  config.Fragment,
 			"WebUI": cfg.Server.WebUI,
 		}); err != nil {
-			logger.Error("failed to execute http template", "error", err)
+			config.Logger.Error("failed to execute http template", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})
+	}))
+	return mux
 }
 
 //go:embed all:webui
@@ -57,22 +59,25 @@ var embeddedWebUIFS, _ = fs.Sub(webuiFiles, "webui")
 
 // CreateViteFragment creates a Vite fragment from the given directory.
 // If dir is empty, it uses the embedded webui files.
-func CreateViteFragment() (*vite.Fragment, error) {
+func CreateViteFragment() (*vite.Fragment, fs.FS, error) {
 	var files fs.FS
-	if cfg.Server.WebUI.Path == "" {
+	if cfg.Server.WebUI.DevMode {
+		files = os.DirFS("./webui") // Relative to root working directory. Assuming this golang server runs from project root.
+	} else if cfg.Server.WebUI.Path == "" {
 		files = embeddedWebUIFS
 	} else {
 		files = os.DirFS(cfg.Server.WebUI.Path)
 	}
 	fragment, err := vite.HTMLFragment(vite.Config{
-		FS:    files,
-		IsDev: cfg.Server.WebUI.DevMode,
+		FS:        files,
+		IsDev:     cfg.Server.WebUI.DevMode,
+		ViteEntry: "src/main.ts", // This is used in dev mode to load the Vite dev server script.
 	})
 	if err != nil {
-		return nil, err
+		return nil, files, err
 	}
 	if cfg.Server.WebUI.DevMode {
 		slog.Info("running in development mode; make sure the Vite dev server is running before accessing the web UI")
 	}
-	return fragment, nil
+	return fragment, files, nil
 }

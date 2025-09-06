@@ -94,11 +94,15 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 		w.Write([]byte("pong"))
 	}))
 
-	webuiFragment, err := CreateViteFragment()
+	webuiFragment, distFS, err := CreateViteFragment()
 	if err != nil {
 		return fmt.Errorf("failed to create Vite fragment: %w", err)
 	}
-	mux.Handle("/", CreateWebuiHandler(webuiFragment, slog.Default()))
+	mux.Handle("/", CreateWebuiHandler(WebUIConfig{
+		Fragment: webuiFragment,
+		DistFS:   distFS,
+		Logger:   slog.Default(),
+	}))
 
 	listener := cfg.Server.Host
 	if listener == nil {

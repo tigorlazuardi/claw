@@ -1,151 +1,178 @@
-<div class="page-content">
-  <h1>Sources</h1>
-  <p>Configure and manage your image sources</p>
-  
-  <div class="sources-grid">
-    <div class="source-card">
-      <div class="source-header">
-        <h3>🔴 Reddit</h3>
-        <span class="source-status active">Active</span>
+<script lang="ts">
+  import { QueryClient, QueryClientProvider } from "@sveltestack/svelte-query";
+  const queryClient = new QueryClient();
+
+  let showAddModal = $state(false);
+
+  function handleAddSource(data: any) {
+    console.log("Adding source:", data);
+    // TODO: Implement actual source creation via API
+    showAddModal = false;
+  }
+</script>
+
+<QueryClientProvider client={queryClient}>
+  <div class="page-content">
+    <div class="page-header">
+      <div>
+        <h1>Sources</h1>
+        <p>Configure and manage your image sources</p>
       </div>
-      <div class="source-info">
-        <p><strong>Subreddits:</strong> wallpapers, EarthPorn, SkyPorn</p>
-        <p><strong>Schedule:</strong> Every 6 hours</p>
-        <p><strong>Last Run:</strong> 2 hours ago</p>
-        <p><strong>Images Collected:</strong> 1,247</p>
-      </div>
-      <div class="source-actions">
-        <button class="btn-primary">Configure</button>
-        <button class="btn-secondary">Run Now</button>
-      </div>
+      <button class="add-btn" onclick={() => (showAddModal = true)}>
+        + Add
+      </button>
     </div>
 
-    <div class="source-card">
-      <div class="source-header">
-        <h3>🎨 Danbooru</h3>
-        <span class="source-status active">Active</span>
+    <div class="sources-grid">
+      <div class="source-card">
+        <div class="source-header">
+          <h3>🔴 Reddit</h3>
+          <span class="source-status active">Active</span>
+        </div>
+        <div class="source-info">
+          <p><strong>Subreddits:</strong> wallpapers, EarthPorn, SkyPorn</p>
+          <p><strong>Schedule:</strong> Every 6 hours</p>
+          <p><strong>Last Run:</strong> 2 hours ago</p>
+          <p><strong>Images Collected:</strong> 1,247</p>
+        </div>
+        <div class="source-actions">
+          <button class="btn-primary">Configure</button>
+          <button class="btn-secondary">Run Now</button>
+        </div>
       </div>
-      <div class="source-info">
-        <p><strong>Tags:</strong> landscape, scenery, nature</p>
-        <p><strong>Schedule:</strong> Daily at 3:00 AM</p>
-        <p><strong>Last Run:</strong> 8 hours ago</p>
-        <p><strong>Images Collected:</strong> 432</p>
-      </div>
-      <div class="source-actions">
-        <button class="btn-primary">Configure</button>
-        <button class="btn-secondary">Run Now</button>
-      </div>
-    </div>
 
-    <div class="source-card">
-      <div class="source-header">
-        <h3>📸 Unsplash</h3>
-        <span class="source-status paused">Paused</span>
+      <div class="source-card">
+        <div class="source-header">
+          <h3>🎨 Danbooru</h3>
+          <span class="source-status active">Active</span>
+        </div>
+        <div class="source-info">
+          <p><strong>Tags:</strong> landscape, scenery, nature</p>
+          <p><strong>Schedule:</strong> Daily at 3:00 AM</p>
+          <p><strong>Last Run:</strong> 8 hours ago</p>
+          <p><strong>Images Collected:</strong> 432</p>
+        </div>
+        <div class="source-actions">
+          <button class="btn-primary">Configure</button>
+          <button class="btn-secondary">Run Now</button>
+        </div>
       </div>
-      <div class="source-info">
-        <p><strong>Keywords:</strong> minimal, abstract, architecture</p>
-        <p><strong>Schedule:</strong> Every 12 hours</p>
-        <p><strong>Last Run:</strong> 3 days ago</p>
-        <p><strong>Images Collected:</strong> 89</p>
-      </div>
-      <div class="source-actions">
-        <button class="btn-primary">Configure</button>
-        <button class="btn-secondary">Resume</button>
-      </div>
-    </div>
 
-    <div class="source-card">
-      <div class="source-header">
-        <h3>🌐 Custom RSS</h3>
-        <span class="source-status inactive">Inactive</span>
+      <div class="source-card">
+        <div class="source-header">
+          <h3>📸 Unsplash</h3>
+          <span class="source-status paused">Paused</span>
+        </div>
+        <div class="source-info">
+          <p><strong>Keywords:</strong> minimal, abstract, architecture</p>
+          <p><strong>Schedule:</strong> Every 12 hours</p>
+          <p><strong>Last Run:</strong> 3 days ago</p>
+          <p><strong>Images Collected:</strong> 89</p>
+        </div>
+        <div class="source-actions">
+          <button class="btn-primary">Configure</button>
+          <button class="btn-secondary">Resume</button>
+        </div>
       </div>
-      <div class="source-info">
-        <p><strong>Feed URL:</strong> example.com/wallpapers.rss</p>
-        <p><strong>Schedule:</strong> Not configured</p>
-        <p><strong>Last Run:</strong> Never</p>
-        <p><strong>Images Collected:</strong> 0</p>
-      </div>
-      <div class="source-actions">
-        <button class="btn-primary">Configure</button>
-        <button class="btn-secondary">Enable</button>
+
+      <div class="source-card">
+        <div class="source-header">
+          <h3>🌐 Custom RSS</h3>
+          <span class="source-status inactive">Inactive</span>
+        </div>
+        <div class="source-info">
+          <p><strong>Feed URL:</strong> example.com/wallpapers.rss</p>
+          <p><strong>Schedule:</strong> Not configured</p>
+          <p><strong>Last Run:</strong> Never</p>
+          <p><strong>Images Collected:</strong> 0</p>
+        </div>
+        <div class="source-actions">
+          <button class="btn-primary">Configure</button>
+          <button class="btn-secondary">Enable</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="add-source-section">
-    <h2>Add New Source</h2>
-    <div class="source-types">
-      <button class="source-type-btn">
-        <span class="icon">🔴</span>
-        <span>Reddit</span>
-      </button>
-      <button class="source-type-btn">
-        <span class="icon">🎨</span>
-        <span>Booru</span>
-      </button>
-      <button class="source-type-btn">
-        <span class="icon">📸</span>
-        <span>Unsplash</span>
-      </button>
-      <button class="source-type-btn">
-        <span class="icon">🌐</span>
-        <span>RSS Feed</span>
-      </button>
-      <button class="source-type-btn">
-        <span class="icon">📁</span>
-        <span>Local Folder</span>
-      </button>
-    </div>
-  </div>
-</div>
+  {#if showAddModal}
+    {#await import("../components/AddSourceModal.svelte") then { default: AddSourceModal }}
+      <AddSourceModal
+        onCloseRequest={() => (showAddModal = false)}
+        onSubmit={handleAddSource}
+      />
+    {/await}
+  {/if}
+</QueryClientProvider>
 
 <style>
   .page-content {
     padding: 2rem;
     max-width: 1200px;
   }
-  
-  .page-content h1 {
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
     margin: 0 0 1rem 0;
     font-size: 2rem;
     font-weight: 600;
-    color: #ffffff;
+    color: hsl(0, 0%, 100%);
   }
-  
-  .page-content > p {
-    color: #aaa;
+
+  .page-header p {
+    color: hsl(0, 0%, 67%);
     font-size: 1.1rem;
-    margin-bottom: 2rem;
+    margin: 0;
   }
-  
+
+  .add-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: hsl(235, 100%, 65%);
+    color: hsl(0, 0%, 100%);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .add-btn:hover {
+    background-color: hsl(235, 85%, 60%);
+  }
+
   .sources-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 3rem;
   }
-  
+
   .source-card {
-    background-color: #2d2d2d;
+    background-color: hsl(0, 0%, 18%);
     border-radius: 8px;
     padding: 1.5rem;
-    border-left: 4px solid #646cff;
+    border-left: 4px solid hsl(235, 100%, 65%);
   }
-  
+
   .source-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
   }
-  
+
   .source-header h3 {
     margin: 0;
-    color: #ffffff;
+    color: hsl(0, 0%, 100%);
     font-size: 1.1rem;
     font-weight: 600;
   }
-  
+
   .source-status {
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
@@ -153,42 +180,43 @@
     font-weight: 600;
     text-transform: uppercase;
   }
-  
+
   .source-status.active {
-    background-color: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background-color: hsla(142, 76%, 36%, 0.2);
+    color: hsl(142, 76%, 56%);
   }
-  
+
   .source-status.paused {
-    background-color: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
+    background-color: hsla(43, 96%, 56%, 0.2);
+    color: hsl(43, 96%, 56%);
   }
-  
+
   .source-status.inactive {
-    background-color: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    background-color: hsla(0, 84%, 60%, 0.2);
+    color: hsl(0, 84%, 60%);
   }
-  
+
   .source-info {
     margin-bottom: 1.5rem;
   }
-  
+
   .source-info p {
     margin: 0.5rem 0;
-    color: #aaa;
+    color: hsl(0, 0%, 67%);
     font-size: 0.9rem;
   }
-  
+
   .source-info strong {
-    color: #ffffff;
+    color: hsl(0, 0%, 100%);
   }
-  
+
   .source-actions {
     display: flex;
     gap: 0.75rem;
   }
-  
-  .btn-primary, .btn-secondary {
+
+  .btn-primary,
+  .btn-secondary {
     padding: 0.5rem 1rem;
     border-radius: 6px;
     border: none;
@@ -197,74 +225,25 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-  
+
   .btn-primary {
-    background-color: #646cff;
-    color: #ffffff;
+    background-color: hsl(235, 100%, 65%);
+    color: hsl(0, 0%, 100%);
   }
-  
+
   .btn-primary:hover {
-    background-color: #5a5fcf;
+    background-color: hsl(235, 85%, 60%);
   }
-  
+
   .btn-secondary {
-    background-color: #3d3d3d;
-    color: #aaa;
-    border: 1px solid #5d5d5d;
+    background-color: hsl(0, 0%, 24%);
+    color: hsl(0, 0%, 67%);
+    border: 1px solid hsl(0, 0%, 37%);
   }
-  
+
   .btn-secondary:hover {
-    background-color: #4d4d4d;
-    color: #ffffff;
-  }
-  
-  .add-source-section {
-    background-color: #2d2d2d;
-    border-radius: 8px;
-    padding: 2rem;
-    border: 2px dashed #5d5d5d;
-  }
-  
-  .add-source-section h2 {
-    margin: 0 0 1.5rem 0;
-    color: #ffffff;
-    font-size: 1.3rem;
-    font-weight: 600;
-    text-align: center;
-  }
-  
-  .source-types {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1rem;
-  }
-  
-  .source-type-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background-color: #3d3d3d;
-    border: 1px solid #5d5d5d;
-    border-radius: 8px;
-    color: #aaa;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .source-type-btn:hover {
-    background-color: #4d4d4d;
-    color: #ffffff;
-    border-color: #646cff;
-  }
-  
-  .source-type-btn .icon {
-    font-size: 1.5rem;
-  }
-  
-  .source-type-btn span:last-child {
-    font-size: 0.9rem;
-    font-weight: 500;
+    background-color: hsl(0, 0%, 30%);
+    color: hsl(0, 0%, 100%);
   }
 </style>
+

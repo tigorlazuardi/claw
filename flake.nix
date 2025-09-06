@@ -104,6 +104,7 @@
               export GOROOT="${pkgs.go_1_25}/share/go"
               export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
               export CLAW_SERVER__WEBUI__PATH="$(pwd)/cmd/claw/internal/webui"
+              export CLAW_SERVER__WEBUI__DEV_MODE=true
               echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
               echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
 
