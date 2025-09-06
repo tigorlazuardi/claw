@@ -1,0 +1,1 @@
+- webui svelte uses runes mode. Use svelte 5 or greater syntax

@@ -28,21 +28,36 @@
 
   let scheduleInput = $state("");
   let isSubmitting = $state(false);
+  let showParameterHelp = $state(false);
 
   async function listSources() {
     const { createClient } = await import("@connectrpc/connect");
     const { createConnectTransport } = await import("@connectrpc/connect-web");
     const { SourceService } = await import("../gen/claw/v1/source_service_pb");
     const transport = createConnectTransport({
-      baseUrl: import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.BASE_URL,
+      baseUrl: import.meta.env.BASE_URL,
     });
     const client = createClient(SourceService, transport);
     return client.listAvailableSources({});
   }
 
   const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
+
+  // Get the selected source object
+  let selectedSource = $derived(
+    $listSourcesResult.data?.sources?.find((s) => s.name === formData.name),
+  );
+
+  // Get parameter placeholder from selected source
+  let parameterPlaceholder = $derived(
+    selectedSource?.parameterPlaceholder ||
+      "Configuration parameters (JSON, comma-separated values, etc.)",
+  );
+
+  // Check if parameter help should be shown
+  let hasParameterHelp = $derived(
+    selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
+  );
 
   function handleSubmit() {
     if (
@@ -125,16 +140,34 @@
       </div>
 
       <div class="form-group">
-        <label for="parameter">
-          Parameters <span class="required">*</span>
-        </label>
+        <div class="label-with-help">
+          <label for="parameter">
+            Parameters <span class="required">*</span>
+          </label>
+          {#if hasParameterHelp}
+            <button
+              type="button"
+              class="help-btn"
+              onclick={() => (showParameterHelp = !showParameterHelp)}
+              aria-label="Show parameter help"
+              title="Show parameter help"
+            >
+              {@render infoIcon()}
+            </button>
+          {/if}
+        </div>
         <textarea
           id="parameter"
           bind:value={formData.parameter}
-          placeholder="Configuration parameters (JSON, comma-separated values, etc.)"
+          placeholder={parameterPlaceholder}
           rows="3"
           required
         ></textarea>
+        {#if showParameterHelp && selectedSource?.parameterHelp}
+          <div class="parameter-help">
+            {selectedSource.parameterHelp}
+          </div>
+        {/if}
         <small>Source-specific configuration parameters</small>
       </div>
 
@@ -162,7 +195,8 @@
           step="1"
         />
         <small>
-          Number of posts to look back when searching (0 = unlimited)
+          Number of posts to look back when searching (0 or negative value =
+          source default)
         </small>
       </div>
 
@@ -227,6 +261,41 @@
     </form>
   </div>
 </div>
+
+{#snippet infoIcon()}
+  <svg
+    class="help-icon"
+    fill="currentColor"
+    version="1.1"
+    id="Capa_1"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    viewBox="0 0 488.484 488.484"
+    xml:space="preserve"
+  >
+    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+    <g
+      id="SVGRepo_tracerCarrier"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    ></g>
+    <g id="SVGRepo_iconCarrier">
+      <g>
+        <g>
+          <path
+            d="M244.236,0.002C109.562,0.002,0,109.565,0,244.238c0,134.679,109.563,244.244,244.236,244.244 c134.684,0,244.249-109.564,244.249-244.244C488.484,109.566,378.92,0.002,244.236,0.002z M244.236,413.619 c-93.4,0-169.38-75.979-169.38-169.379c0-93.396,75.979-169.375,169.38-169.375s169.391,75.979,169.391,169.375 C413.627,337.641,337.637,413.619,244.236,413.619z"
+          ></path>
+          <path
+            d="M244.236,206.816c-14.757,0-26.619,11.962-26.619,26.73v118.709c0,14.769,11.862,26.735,26.619,26.735 c14.769,0,26.62-11.967,26.62-26.735V233.546C270.855,218.778,259.005,206.816,244.236,206.816z"
+          ></path>
+          <path
+            d="M244.236,107.893c-19.949,0-36.102,16.158-36.102,36.091c0,19.934,16.152,36.092,36.102,36.092 c19.929,0,36.081-16.158,36.081-36.092C280.316,124.051,264.165,107.893,244.236,107.893z"
+          ></path>
+        </g>
+      </g>
+    </g>
+  </svg>
+{/snippet}
 
 <style>
   .modal-overlay {
@@ -485,5 +554,52 @@
   .btn-secondary:hover {
     background-color: hsl(0, 0%, 30%);
     color: hsl(0, 0%, 100%);
+  }
+
+  .label-with-help {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .help-btn {
+    margin: 0;
+    border-radius: 50%;
+    border: none;
+    color: hsl(0, 0%, 100%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px hsla(0, 0%, 0%, 0.2);
+    padding: 0;
+  }
+
+  .help-btn:hover {
+    background-color: hsl(235, 85%, 60%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px hsla(0, 0%, 0%, 0.3);
+  }
+
+  .help-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    display: block;
+  }
+
+  .parameter-help {
+    background-color: hsl(210, 25%, 95%);
+    color: hsl(210, 15%, 35%);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    border: 1px solid hsl(210, 25%, 85%);
+    white-space: pre-wrap;
   }
 </style>

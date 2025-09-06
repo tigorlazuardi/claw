@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/tigorlazuardi/claw/lib/claw/source"
 )
 
 const SourceName = "claw.reddit.v1"
@@ -15,8 +17,36 @@ type Doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
+var _ source.Source = (*Reddit)(nil)
+
 type Reddit struct {
 	Client Doer
+}
+
+const helpString = /*markdown*/
+`This source fetches images from a Reddit user or subreddit.
+
+Supported parameter formats:
+
+- Full URL to a subreddit, e.g. https://reddit.com/r/wallpapers
+- Also accept shorthand expression: r/wallpapers.
+- u/{user}
+- r/{subreddit}
+- user/{user} (will be normalized to u/{user})
+- user/{user}.json (will be normalized to u/{user})
+`
+
+// ParameterHelp returns the help string for the parameter.
+// Markdown formatting is supported, but any Javascript will be stripped.
+func (re *Reddit) ParameterHelp() string {
+	return helpString
+}
+
+// ParameterPlaceholder returns the placeholder string for the parameter.
+//
+// This is usually a very short string to show as a hint for the user.
+func (re *Reddit) ParameterPlaceholder() string {
+	return `Subreddit name or username, e.g. r/wallpapers or u/spez`
 }
 
 // Name returns the unique kind identifier for the source.

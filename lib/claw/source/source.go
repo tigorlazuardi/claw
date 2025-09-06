@@ -51,6 +51,16 @@ type Source interface {
 	// This must return nil error if valid.
 	ValidateTransformParameter(ctx context.Context, param string) (transformed string, err error)
 
+	// ParameterHelp returns the help string for the parameter.
+	//
+	// Markdown formatting is supported, but any Javascript will be stripped.
+	ParameterHelp() string
+
+	// ParameterPlaceholder returns the placeholder string for the parameter.
+	//
+	// This is usually a very short string to show as a hint for the user.
+	ParameterPlaceholder() string
+
 	// Run runs the source to fetch image Metadata based on the given request.
 	//
 	// Note that Sources must not download the actual image itself (or only download small part of image to get metadata like dimensions if unavailable in conventional means).

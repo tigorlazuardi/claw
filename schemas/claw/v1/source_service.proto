@@ -180,15 +180,21 @@ message ListAvailableSourcesRequest {
 message AvailableSource {
   // Source name identifier (e.g., "claw.reddit.v1")
   string name = 1;
-  
+
   // Human-readable display name
   string display_name = 2;
-  
+
   // Author of the source implementation
   string author = 3;
-  
+
   // URL to author's profile or contact
   string author_url = 4;
+
+  // Help text for the source parameter
+  string parameter_help = 5;
+
+  // Placeholder text for the parameter input
+  string parameter_placeholder = 6;
 }
 
 // List available sources response
