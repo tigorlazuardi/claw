@@ -31,15 +31,6 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           validateProtos = protoValidate pkgs;
-          kittyConfig = ''
-            layout tall
-            launch --title="Command" fish
-            launch --title="Server" wgo -file=.go clear :: go run ./cmd/claw/main.go server
-            launch --title="Migrations" wgo -file=.sql clear :: go run ./cmd/goose/main.go --reset :: go run ./cmd/go-jet/main.go
-            launch --hold --title="Protobuf" ${pkgs.writeShellScript "proto-watch" ''
-              cd ./schemas && wgo -file=.proto -file=buf.gen.yaml -file=buf.yaml clear :: buf generate :: echo "Protobuf generated. Watching for changes..."
-            ''}
-          '';
         in
         {
           default = pkgs.mkShell {
@@ -68,9 +59,18 @@
 
               fish
               wgo
+              foot
 
               (writeShellScriptBin "dev" ''
-                ${kitty}/bin/kitty --working-directory=$KITTY_PWD --session ${pkgs.writeText "kitty.conf" kittyConfig}
+                systemd-run --user --scope --unit=claw-dev ${writeShellScript "dev" ''
+                  foot wgo -file=.go clear :: go run ./cmd/claw/main.go server &
+                  foot wgo -file =.sql clear :: go run ./cmd/goose/main.go --reset :: go run ./cmd/go-jet/main.go &
+                  foot --working-directory=$(pwd)/webui npm run dev &
+                  foot --working-directory=$(pwd)/schemas wgo -file=.proto -file=buf.gen.yaml -file=buf.yaml clear :: buf generate :: echo "Protobuf generated. Watching for changes..." &
+                ''}
+              '')
+              (writeShellScriptBin "stop" ''
+                systemctl --user stop claw-dev.scope || echo "No claw-dev scope running"
               '')
             ];
 
@@ -103,7 +103,6 @@
               export GOOSE_DBSTRING="$(pwd)/artifacts/migrate.db"
               export GOROOT="${pkgs.go_1_25}/share/go"
               export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
-              export KITTY_PWD="$(pwd)"
               export CLAW_SERVER__WEBUI__PATH="$(pwd)/cmd/claw/internal/webui"
               echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
               echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
