@@ -29,7 +29,7 @@
   let scheduleInput = $state("");
   let isSubmitting = $state(false);
 
-  const listSourcesResult = useQuery(["sources", "listDropdown"], async () => {
+  async function listSources() {
     const { createClient } = await import("@connectrpc/connect");
     const { createConnectTransport } = await import("@connectrpc/connect-web");
     const { SourceService } = await import("../gen/claw/v1/source_service_pb");
@@ -40,7 +40,9 @@
     });
     const client = createClient(SourceService, transport);
     return client.listAvailableSources({});
-  });
+  }
+
+  const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
 
   function handleSubmit() {
     if (
@@ -66,20 +68,27 @@
   function removeSchedule(index: number) {
     formData.schedules = formData.schedules.filter((_, i) => i !== index);
   }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Escape") {
-      onCloseRequest();
-    }
-  }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<div class="modal-overlay" role="button" onclick={onCloseRequest}>
-  <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+<div
+  class="modal-overlay"
+  role="button"
+  tabindex="0"
+  onclick={onCloseRequest}
+  onkeydown={() => {}}
+  aria-label="Close modal"
+>
+  <div
+    class="modal-content"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+    tabindex="-1"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="modal-header">
-      <h2>Add New Source</h2>
+      <h2 id="modal-title">Add New Source</h2>
       <button class="close-btn" onclick={onCloseRequest}>×</button>
     </div>
 
@@ -91,7 +100,9 @@
       }}
     >
       <div class="form-group">
-        <label for="name">Source <span class="required">*</span></label>
+        <label for="name">
+          Source <span class="required">*</span>
+        </label>
         {#if $listSourcesResult.isLoading}
           <select id="name" disabled>
             <option>Loading sources...</option>
@@ -104,37 +115,19 @@
           <select id="name" bind:value={formData.name} required>
             <option value="" disabled selected>Select a source</option>
             {#each $listSourcesResult.data?.sources || [] as source}
-              <option value={source.name}>{source.displayName}</option>
+              <option value={source.name}>
+                {source.displayName} ({source.name})
+              </option>
             {/each}
           </select>
         {/if}
-        <input
-          id="name"
-          type="text"
-          bind:value={formData.name}
-          placeholder="e.g., reddit, booru"
-          required
-        />
-        <small>Internal source identifier</small>
+        <small>Choose the supported sources</small>
       </div>
 
       <div class="form-group">
-        <label for="display_name"
-          >Display Name <span class="required">*</span></label
-        >
-        <input
-          id="display_name"
-          type="text"
-          bind:value={formData.display_name}
-          placeholder="e.g., Reddit Wallpapers"
-          required
-        />
-        <small>Human-readable name shown in UI</small>
-      </div>
-
-      <div class="form-group">
-        <label for="parameter">Parameters <span class="required">*</span></label
-        >
+        <label for="parameter">
+          Parameters <span class="required">*</span>
+        </label>
         <textarea
           id="parameter"
           bind:value={formData.parameter}
@@ -146,6 +139,20 @@
       </div>
 
       <div class="form-group">
+        <label for="display_name">
+          Display Name <span class="required">*</span>
+        </label>
+        <input
+          id="display_name"
+          type="text"
+          bind:value={formData.display_name}
+          placeholder="e.g., Reddit Wallpapers"
+          required
+        />
+        <small>Human-readable name shown in UI</small>
+      </div>
+
+      <div class="form-group">
         <label for="countback">Count Back</label>
         <input
           id="countback"
@@ -154,9 +161,9 @@
           min="0"
           step="1"
         />
-        <small
-          >Number of posts to look back when searching (0 = unlimited)</small
-        >
+        <small>
+          Number of posts to look back when searching (0 = unlimited)
+        </small>
       </div>
 
       <div class="form-group">
@@ -193,9 +200,9 @@
             {#each formData.schedules as schedule, index}
               <div class="schedule-item">
                 <code>{schedule}</code>
-                <button type="button" onclick={() => removeSchedule(index)}
-                  >×</button
-                >
+                <button type="button" onclick={() => removeSchedule(index)}>
+                  ×
+                </button>
               </div>
             {/each}
           </div>
@@ -307,7 +314,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid hsl(0, 0%, 37%);
@@ -319,9 +327,30 @@
   }
 
   input:focus,
-  textarea:focus {
+  textarea:focus,
+  select:focus {
     outline: none;
     border-color: hsl(235, 100%, 65%);
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23aaa' d='M4.427 9.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 9H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px;
+    padding-right: 2.5rem;
+  }
+
+  select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  select option {
+    background-color: hsl(0, 0%, 24%);
+    color: hsl(0, 0%, 100%);
   }
 
   textarea {
@@ -458,4 +487,3 @@
     color: hsl(0, 0%, 100%);
   }
 </style>
-
