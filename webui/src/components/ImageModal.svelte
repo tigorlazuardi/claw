@@ -1,108 +1,99 @@
 <script lang="ts">
-  import type { Image } from '../gen/claw/v1/image_pb'
-  import { createEventDispatcher } from 'svelte'
+  import type { Image } from "../gen/claw/v1/image_pb";
+  import type { M } from "../types";
 
-  export let image: Image | null = null
-  export let isOpen: boolean = false
+  interface Props {
+    image: M<Image>;
+    onCloseRequest?: (event: Event) => void;
+  }
 
-  const dispatch = createEventDispatcher()
-  
+  const { image, onCloseRequest }: Props = $props();
+
   function formatFileSize(bytes: number): string {
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    if (bytes === 0) return '0 B'
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return Math.round(bytes / Math.pow(1024, i) * 10) / 10 + ' ' + sizes[i]
+    const sizes = ["B", "KB", "MB", "GB"];
+    if (bytes === 0) return "0 B";
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 10) / 10 + " " + sizes[i];
   }
-  
+
   function formatDimensions(width: number, height: number): string {
-    return `${width} × ${height}`
+    return `${width} × ${height}`;
   }
-
-  function closeModal() {
-    dispatch('close')
-  }
-
-  function handleKeydown(event) {
-    if (event.key === 'Escape') {
-      closeModal()
-    }
-  }
-
-  function handleBackdropClick(event) {
-    if (event.target === event.currentTarget) {
-      closeModal()
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      onCloseRequest?.(event);
     }
   }
 </script>
 
-{#if isOpen && image}
-  <div 
-    class="modal-overlay" 
-    on:click={handleBackdropClick}
-    on:keydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-    tabindex="-1"
-  >
-    <div 
-      class="modal-content"
-      role="document"
+<div
+  class="modal-overlay"
+  onclick={onCloseRequest}
+  onkeydown={handleKeydown}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  tabindex="-1"
+>
+  <div class="modal-content" role="document">
+    <button class="close-btn" onclick={onCloseRequest} aria-label="Close modal"
+      >×</button
     >
-      <button 
-        class="close-btn" 
-        on:click={closeModal}
-        aria-label="Close modal"
-      >×</button>
-      
-      <div class="modal-image">
-        <img 
-          src="https://picsum.photos/800/600?random={image.id}" 
-          alt={image.title || `Image ${image.id}`}
-        />
-      </div>
-      
-      <div class="modal-info">
-        <h3 id="modal-title">{image.title || `Image ${image.id}`}</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">Dimensions:</span>
-            <span class="info-value">{formatDimensions(image.width, image.height)}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">File Size:</span>
-            <span class="info-value">{formatFileSize(image.filesize)}</span>
-          </div>
-          {#if image.postAuthor}
-            <div class="info-item">
-              <span class="info-label">Author:</span>
-              <span class="info-value">{image.postAuthor}</span>
-            </div>
-          {/if}
-          {#if image.postUrl}
-            <div class="info-item">
-              <span class="info-label">Source:</span>
-              <a href={image.postUrl} target="_blank" rel="noopener noreferrer" class="info-link">
-                View Original
-              </a>
-            </div>
-          {/if}
+
+    <div class="modal-image">
+      <img
+        src="https://picsum.photos/800/600?random={image.id}"
+        alt={image.title || `Image ${image.id}`}
+      />
+    </div>
+
+    <div class="modal-info">
+      <h3 id="modal-title">{image.title || `Image ${image.id}`}</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Dimensions:</span>
+          <span class="info-value"
+            >{formatDimensions(image.width, image.height)}</span
+          >
         </div>
-        
-        {#if image.tags && image.tags.length > 0}
-          <div class="tags-section">
-            <span class="tags-label">Tags:</span>
-            <div class="tags">
-              {#each image.tags as tag}
-                <span class="tag">{tag}</span>
-              {/each}
-            </div>
+        <div class="info-item">
+          <span class="info-label">File Size:</span>
+          <span class="info-value">{formatFileSize(image.filesize)}</span>
+        </div>
+        {#if image.postAuthor}
+          <div class="info-item">
+            <span class="info-label">Author:</span>
+            <span class="info-value">{image.postAuthor}</span>
+          </div>
+        {/if}
+        {#if image.postUrl}
+          <div class="info-item">
+            <span class="info-label">Source:</span>
+            <a
+              href={image.postUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="info-link"
+            >
+              View Original
+            </a>
           </div>
         {/if}
       </div>
+
+      {#if image.tags && image.tags.length > 0}
+        <div class="tags-section">
+          <span class="tags-label">Tags:</span>
+          <div class="tags">
+            {#each image.tags as tag}
+              <span class="tag">{tag}</span>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
-{/if}
+</div>
 
 <style>
   .modal-overlay {
@@ -118,7 +109,7 @@
     z-index: 1000;
     backdrop-filter: blur(4px);
   }
-  
+
   .modal-content {
     background-color: #2d2d2d;
     border-radius: 8px;
@@ -133,7 +124,7 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     pointer-events: all;
   }
-  
+
   .close-btn {
     position: absolute;
     top: 1rem;
@@ -152,44 +143,44 @@
     justify-content: center;
     transition: all 0.2s ease;
   }
-  
+
   .close-btn:hover {
     background-color: rgba(255, 255, 255, 0.2);
     transform: scale(1.1);
   }
-  
+
   .modal-image {
     text-align: center;
     margin-bottom: 1rem;
   }
-  
+
   .modal-image img {
     max-width: 100%;
     max-height: 70vh;
     object-fit: contain;
     border-radius: 4px;
   }
-  
+
   .modal-info h3 {
     margin: 0 0 1rem 0;
     color: #ffffff;
     font-size: 1.25rem;
     font-weight: 600;
   }
-  
+
   .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     margin-bottom: 1rem;
   }
-  
+
   .info-item {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
   }
-  
+
   .info-label {
     font-size: 0.8rem;
     color: #aaa;
@@ -197,29 +188,29 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  
+
   .info-value {
     color: #ffffff;
     font-size: 0.9rem;
   }
-  
+
   .info-link {
     color: #646cff;
     text-decoration: none;
     font-size: 0.9rem;
     transition: color 0.2s ease;
   }
-  
+
   .info-link:hover {
     color: #5a5fcf;
     text-decoration: underline;
   }
-  
+
   .tags-section {
     border-top: 1px solid #3d3d3d;
     padding-top: 1rem;
   }
-  
+
   .tags-label {
     font-size: 0.8rem;
     color: #aaa;
@@ -229,13 +220,13 @@
     display: block;
     margin-bottom: 0.5rem;
   }
-  
+
   .tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-  
+
   .tag {
     background-color: #3d3d3d;
     color: #ffffff;
@@ -250,13 +241,14 @@
       margin: 1rem;
       padding: 1rem;
     }
-    
+
     .info-grid {
       grid-template-columns: 1fr;
     }
-    
+
     .modal-image img {
       max-height: 50vh;
     }
   }
 </style>
+

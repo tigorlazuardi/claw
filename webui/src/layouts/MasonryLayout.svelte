@@ -2,8 +2,9 @@
   import type { Image } from "../gen/claw/v1/image_pb";
   import ImageCard from "../components/ImageCard.svelte";
   import Masonry from "svelte-bricks";
+  import type { M } from "../types";
 
-  export let images: Image[] = [];
+  export let images: M<Image>[] = [];
   export let dateHeader: string = "";
 </script>
 

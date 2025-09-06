@@ -1,5 +1,8 @@
 <script lang="ts">
   import { link, active } from "@dvcol/svelte-simple-router/action";
+  import { useRouter } from "@dvcol/svelte-simple-router";
+
+  const router = useRouter();
 
   const menuItems = [
     {
@@ -23,8 +26,10 @@
     {#each menuItems as item}
       <a
         href={item.id === "home" ? "/" : item.id}
-        class="nav-item"
-        use:active
+        class={{
+          "nav-item": true,
+          active: router.id === item.id,
+        }}
         use:link
       >
         <span class="icon">{item.icon}</span>

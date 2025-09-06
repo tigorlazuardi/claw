@@ -2,7 +2,11 @@
   import type { Image } from "../gen/claw/v1/image_pb";
   import type { M } from "../types";
 
-  export let image: M<Image>;
+  interface Props {
+    image: M<Image>;
+  }
+
+  const { image }: Props = $props();
 
   function formatFileSize(bytes: number): string {
     const sizes = ["B", "KB", "MB", "GB"];
@@ -14,32 +18,57 @@
   function formatDimensions(width: number, height: number): string {
     return `${width} × ${height}`;
   }
+
+  let modalOpen = $state(false);
 </script>
 
-<figure class="image-card">
-  <div class="image-container" role="button" tabindex="0">
-    <img
-      src="https://picsum.photos/{image.width}/{image.height}?random={image.id}"
-      alt={image.title || `Image ${image.id}`}
-      loading="lazy"
-    />
-    <div class="image-overlay">
-      <div class="image-info">
-        <div class="image-title">
-          {image.title || `Image ${image.id}`}
-        </div>
-        <div class="image-meta">
-          {formatDimensions(image.width, image.height)} • {formatFileSize(
-            image.filesize,
-          )}
+{#snippet urlify(title: string, link?: string)}
+  {#if link}
+    <a
+      class="image-title"
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="(opens in a new tab)">{title}</a
+    >
+  {:else}
+    <div class="image-title">{title}</div>
+  {/if}
+{/snippet}
+
+<div>
+  <figure class="image-card">
+    <button
+      class="image-container"
+      tabindex="0"
+      onclick={() => (modalOpen = true)}
+    >
+      <img
+        src="https://picsum.photos/{image.width}/{image.height}?random={image.id}"
+        alt={image.title || `Image ${image.id}`}
+        loading="lazy"
+      />
+      <div class="image-overlay">
+        <div class="image-info">
+          {@render urlify(image.title || `Image ${image.id}`, image.postUrl)}
+          <div class="image-meta">
+            {formatDimensions(image.width, image.height)} • {formatFileSize(
+              image.filesize,
+            )}
+          </div>
         </div>
       </div>
-    </div>
-    {#if image.isFavorite}
-      <div class="favorite-badge">★</div>
-    {/if}
-  </div>
-</figure>
+      {#if image.isFavorite}
+        <div class="favorite-badge">★</div>
+      {/if}
+    </button>
+  </figure>
+  {#if modalOpen}
+    {#await import("./ImageModal.svelte") then { default: ImageModal }}
+      <ImageModal {image} onCloseRequest={() => (modalOpen = false)} />
+    {/await}
+  {/if}
+</div>
 
 <style>
   .image-card {
@@ -60,6 +89,10 @@
   .image-container {
     position: relative;
     overflow: hidden;
+    min-height: 5rem; /* If image is broken, the title text should be at least readable*/
+    margin: 0;
+    padding: 0;
+    text-align: left;
   }
 
   .image-container img {
@@ -78,8 +111,8 @@
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    background-color: rgba(255, 215, 0, 0.9);
-    color: #000;
+    background-color: hsla(51, 100%, 50%, 0.9);
+    color: hsl(0, 0%, 0%);
     padding: 0.25rem;
     border-radius: 50%;
     font-size: 0.8rem;
@@ -98,8 +131,8 @@
     right: 0;
     background: linear-gradient(
       to top,
-      rgba(0, 0, 0, 0.8) 0%,
-      rgba(0, 0, 0, 0.4) 50%,
+      hsla(0, 0%, 0%, 0.8) 0%,
+      hsla(0, 0%, 0%, 0.4) 50%,
       transparent 100%
     );
     padding: 1rem 0.75rem 0.75rem 0.75rem;
@@ -108,19 +141,24 @@
 
   .image-title {
     font-weight: 600;
-    color: #ffffff;
+    color: hsl(0, 0%, 100%);
     margin-bottom: 0.25rem;
     font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
+    text-align: left;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.8);
+  }
+
+  .image-title:hover {
+    text-decoration: underline;
+    color: hsl(210, 100%, 80%);
   }
 
   .image-meta {
-    color: #e0e0e0;
+    color: hsl(0, 0%, 88%);
     font-size: 0.8rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.8);
   }
 </style>
-
