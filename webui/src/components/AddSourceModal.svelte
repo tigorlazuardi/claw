@@ -1,32 +1,96 @@
 <script lang="ts">
-  import { useQuery } from "@sveltestack/svelte-query";
+  import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
+  import { form as formValidator, field } from "svelte-forms";
+  import { required } from "svelte-forms/validators";
+  import type { M } from "../types";
+  import type { CreateSourceRequest } from "../gen/claw/v1/source_service_pb";
 
   interface Props {
+    /**
+     * Callback when the modal is requesting to be closed or removed from the DOM.
+     * This will be called when the user clicks the close button, cancel button,
+     * or the server responds with success after form submission.
+     *
+     * This function will not be called if the user clicks outside the modal or press the escape key
+     * to prevent accidental closure.
+     */
     onCloseRequest: () => void;
-    onSubmit?: (data: CreateSourceData) => void;
   }
 
-  interface CreateSourceData {
-    name: string;
-    display_name: string;
-    parameter: string;
-    countback: number;
-    is_disabled: boolean;
-    schedules: string[];
+  const name = field("name", "", [required()]);
+  const parameter = field("parameter", "", [required()]);
+  const display_name = field("display_name", "", [required()]);
+  const countback = field("countback", 200);
+  const is_disabled = field("is_disabled", false);
+
+  const schedules = $state<string[]>([]);
+  let scheduleExpressionError = $state<string | undefined>();
+  const scheduleInput = field("schedule", "", [
+    async (val: string) => {
+      if (val.trim() === "") {
+        scheduleExpressionError = undefined;
+        return { valid: true, name: "cron_format" };
+      }
+      const { CronExpressionParser } = await import("cron-parser");
+      try {
+        CronExpressionParser.parse(val);
+        scheduleExpressionError = undefined;
+        return { valid: true, name: "cron_format" };
+      } catch (e) {
+        scheduleExpressionError =
+          "invalid cron expression: " + (e as Error).message;
+        return { valid: false, name: "cron_format" };
+      }
+    },
+  ]);
+  const addSourceForm = formValidator(
+    name,
+    parameter,
+    display_name,
+    countback,
+    is_disabled,
+    scheduleInput,
+  );
+
+  const { onCloseRequest }: Props = $props();
+
+  async function createConnectClient() {
+    const { createClient } = await import("@connectrpc/connect");
+    const { createConnectTransport } = await import("@connectrpc/connect-web");
+    const { SourceService } = await import("../gen/claw/v1/source_service_pb");
+    const transport = createConnectTransport({
+      baseUrl: import.meta.env.BASE_URL,
+    });
+    return createClient(SourceService, transport);
   }
 
-  const { onCloseRequest, onSubmit }: Props = $props();
+  async function postCreateRequest() {
+    if (!$addSourceForm.valid) {
+      return;
+    }
+    const data: M<CreateSourceRequest> = {
+      name: $name.value,
+      displayName: $display_name.value,
+      parameter: $parameter.value,
+      countback: Number($countback.value),
+      isDisabled: Boolean($is_disabled.value),
+      schedules: schedules,
+    };
+    return createConnectClient().then((client) => client.createSource(data));
+  }
 
-  let formData = $state<CreateSourceData>({
-    name: "",
-    display_name: "",
-    parameter: "",
-    countback: 200,
-    is_disabled: false,
-    schedules: [],
-  });
+  let serverErrorResponse = $state<Error | null>(null);
+  function handleOnSubmit() {
+    return postCreateRequest()
+      .then(async (res) => {
+        if (!res) return;
+        const queryClient = useQueryClient();
+        queryClient.invalidateQueries(["sources", "list"]);
+        onCloseRequest();
+      })
+      .catch((err: Error) => (serverErrorResponse = err));
+  }
 
-  let scheduleInput = $state("");
   let isSubmitting = $state(false);
   let showParameterHelp = $state(false);
 
@@ -45,10 +109,10 @@
 
   // Get the selected source object
   let selectedSource = $derived(
-    $listSourcesResult.data?.sources?.find((s) => s.name === formData.name),
+    $listSourcesResult.data?.sources?.find((s) => s.name === $name.name),
   );
 
-  let sourceSelected = $derived(!!formData.name);
+  let sourceSelected = $derived(!!$name.name);
 
   // Get parameter placeholder from selected source
   let parameterPlaceholder = $derived(
@@ -61,29 +125,15 @@
     selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
   );
 
-  function handleSubmit() {
-    if (
-      !formData.name.trim() ||
-      !formData.display_name.trim() ||
-      !formData.parameter.trim()
-    ) {
-      return;
-    }
-
-    isSubmitting = true;
-    onSubmit?.(formData);
-    isSubmitting = false;
+  async function addSchedule() {
+    await scheduleInput.validate();
+    if ($addSourceForm.hasError("schedule.cron_format")) return;
+    schedules.push($scheduleInput.value);
+    scheduleInput.reset();
   }
 
-  function addSchedule() {
-    if (scheduleInput.trim()) {
-      formData.schedules = [...formData.schedules, scheduleInput.trim()];
-      scheduleInput = "";
-    }
-  }
-
-  function removeSchedule(index: number) {
-    formData.schedules = formData.schedules.filter((_, i) => i !== index);
+  function removeSchedule(i: number) {
+    schedules.splice(i, 1);
   }
 </script>
 
@@ -106,7 +156,7 @@
       class="modal-form"
       onsubmit={(e) => {
         e.preventDefault();
-        handleSubmit();
+        handleOnSubmit();
       }}
     >
       <div class="form-group">
@@ -114,15 +164,15 @@
           Source <span class="required">*</span>
         </label>
         {#if $listSourcesResult.isLoading}
-          <select id="name" disabled>
+          <select name={$name.name} id="name" disabled>
             <option>Loading sources...</option>
           </select>
         {:else if $listSourcesResult.isError}
-          <select id="name" disabled>
+          <select name={$name.name} id="name" disabled>
             <option>Error loading sources</option>
           </select>
         {:else}
-          <select id="name" bind:value={formData.name} required>
+          <select name={$name.name} id="name" bind:value={$name.value}>
             <option value="" disabled selected>Select a source</option>
             {#each $listSourcesResult.data?.sources || [] as source}
               <option value={source.name}>
@@ -153,11 +203,11 @@
             {/if}
           </div>
           <textarea
+            name={$parameter.name}
             id="parameter"
-            bind:value={formData.parameter}
+            bind:value={$parameter.value}
             placeholder={parameterPlaceholder}
             rows="3"
-            required
           ></textarea>
           {#if showParameterHelp && selectedSource?.parameterHelp}
             {#await import("./MarkdownText.svelte") then { default: MarkdownText }}
@@ -166,41 +216,44 @@
               </div>
             {/await}
           {/if}
-          <small>Source-specific configuration parameters</small>
+          {@render labelOrError(
+            "Source-specific configuration parameters",
+            $name.errors.join(" "),
+          )}
         </div>
 
         <div class="form-group">
-          <label for="display_name">
+          <label for={$display_name.name}>
             Display Name <span class="required">*</span>
           </label>
           <input
             id="display_name"
+            name={$display_name.name}
             type="text"
-            bind:value={formData.display_name}
+            bind:value={$display_name.value}
             placeholder="e.g., Reddit Wallpapers"
-            required
           />
           <small>Human-readable name shown in UI</small>
         </div>
 
         <div class="form-group">
-          <label for="countback">Count Back</label>
+          <label for={$countback.name}>Count Back</label>
           <input
             id="countback"
+            name={$countback.name}
             type="number"
-            bind:value={formData.countback}
+            bind:value={$countback.value}
             min="0"
             step="1"
           />
           <small>
-            Number of posts to look back when searching (0 or negative value =
-            source default)
+            Number of posts to look back when searching (0 = source default)
           </small>
         </div>
 
         <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={formData.is_disabled} />
+          <label class="checkbox-label" for={$is_disabled.name}>
+            <input type="checkbox" bind:checked={$is_disabled.value} />
             Start disabled
           </label>
           <small>Source will be created but won't run automatically</small>
@@ -212,7 +265,7 @@
             <input
               id="schedule-input"
               type="text"
-              bind:value={scheduleInput}
+              bind:value={$scheduleInput.value}
               placeholder="0 */6 * * * (cron expression)"
               onkeydown={(e) =>
                 e.key === "Enter" && (e.preventDefault(), addSchedule())}
@@ -220,16 +273,19 @@
             <button
               type="button"
               onclick={addSchedule}
-              disabled={!scheduleInput.trim()}
+              disabled={!$scheduleInput.valid}
             >
               Add
             </button>
           </div>
-          <small>Cron expressions for automated runs</small>
+          {@render labelOrError(
+            "Add cron expressions to schedule automated runs",
+            scheduleExpressionError,
+          )}
 
-          {#if formData.schedules.length > 0}
+          {#if schedules.length > 0}
             <div class="schedule-list">
-              {#each formData.schedules as schedule, index}
+              {#each schedules as schedule, index (index)}
                 <div class="schedule-item">
                   <code>{schedule}</code>
                   <button type="button" onclick={() => removeSchedule(index)}>
@@ -249,10 +305,7 @@
         <button
           type="submit"
           class="btn-primary"
-          disabled={isSubmitting ||
-            !formData.name.trim() ||
-            !formData.display_name.trim() ||
-            !formData.parameter.trim()}
+          disabled={!$addSourceForm.valid}
         >
           {isSubmitting ? "Creating..." : "Create Source"}
         </button>
@@ -260,6 +313,14 @@
     </form>
   </div>
 </div>
+
+{#snippet labelOrError(helpText: string, errString?: string)}
+  {#if errString}
+    <small class="error-label">{errString}</small>
+  {:else}
+    <small>{helpText}</small>
+  {/if}
+{/snippet}
 
 {#snippet infoIcon()}
   <svg

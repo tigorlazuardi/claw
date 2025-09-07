@@ -1,14 +1,9 @@
 <script lang="ts">
   import { QueryClient, QueryClientProvider } from "@sveltestack/svelte-query";
+  import LoadingModal from "../components/LoadingModal.svelte";
   const queryClient = new QueryClient();
 
   let showAddModal = $state(false);
-
-  function handleAddSource(data: any) {
-    console.log("Adding source:", data);
-    // TODO: Implement actual source creation via API
-    showAddModal = false;
-  }
 </script>
 
 <QueryClientProvider client={queryClient}>
@@ -30,10 +25,22 @@
           <span class="source-status active">Active</span>
         </div>
         <div class="source-info">
-          <p><strong>Subreddits:</strong> wallpapers, EarthPorn, SkyPorn</p>
-          <p><strong>Schedule:</strong> Every 6 hours</p>
-          <p><strong>Last Run:</strong> 2 hours ago</p>
-          <p><strong>Images Collected:</strong> 1,247</p>
+          <p>
+            <strong>Subreddits:</strong>
+            wallpapers, EarthPorn, SkyPorn
+          </p>
+          <p>
+            <strong>Schedule:</strong>
+            Every 6 hours
+          </p>
+          <p>
+            <strong>Last Run:</strong>
+            2 hours ago
+          </p>
+          <p>
+            <strong>Images Collected:</strong>
+            1,247
+          </p>
         </div>
         <div class="source-actions">
           <button class="btn-primary">Configure</button>
@@ -47,10 +54,22 @@
           <span class="source-status active">Active</span>
         </div>
         <div class="source-info">
-          <p><strong>Tags:</strong> landscape, scenery, nature</p>
-          <p><strong>Schedule:</strong> Daily at 3:00 AM</p>
-          <p><strong>Last Run:</strong> 8 hours ago</p>
-          <p><strong>Images Collected:</strong> 432</p>
+          <p>
+            <strong>Tags:</strong>
+            landscape, scenery, nature
+          </p>
+          <p>
+            <strong>Schedule:</strong>
+            Daily at 3:00 AM
+          </p>
+          <p>
+            <strong>Last Run:</strong>
+            8 hours ago
+          </p>
+          <p>
+            <strong>Images Collected:</strong>
+            432
+          </p>
         </div>
         <div class="source-actions">
           <button class="btn-primary">Configure</button>
@@ -64,10 +83,22 @@
           <span class="source-status paused">Paused</span>
         </div>
         <div class="source-info">
-          <p><strong>Keywords:</strong> minimal, abstract, architecture</p>
-          <p><strong>Schedule:</strong> Every 12 hours</p>
-          <p><strong>Last Run:</strong> 3 days ago</p>
-          <p><strong>Images Collected:</strong> 89</p>
+          <p>
+            <strong>Keywords:</strong>
+            minimal, abstract, architecture
+          </p>
+          <p>
+            <strong>Schedule:</strong>
+            Every 12 hours
+          </p>
+          <p>
+            <strong>Last Run:</strong>
+            3 days ago
+          </p>
+          <p>
+            <strong>Images Collected:</strong>
+            89
+          </p>
         </div>
         <div class="source-actions">
           <button class="btn-primary">Configure</button>
@@ -81,10 +112,22 @@
           <span class="source-status inactive">Inactive</span>
         </div>
         <div class="source-info">
-          <p><strong>Feed URL:</strong> example.com/wallpapers.rss</p>
-          <p><strong>Schedule:</strong> Not configured</p>
-          <p><strong>Last Run:</strong> Never</p>
-          <p><strong>Images Collected:</strong> 0</p>
+          <p>
+            <strong>Feed URL:</strong>
+            example.com/wallpapers.rss
+          </p>
+          <p>
+            <strong>Schedule:</strong>
+            Not configured
+          </p>
+          <p>
+            <strong>Last Run:</strong>
+            Never
+          </p>
+          <p>
+            <strong>Images Collected:</strong>
+            0
+          </p>
         </div>
         <div class="source-actions">
           <button class="btn-primary">Configure</button>
@@ -95,11 +138,12 @@
   </div>
 
   {#if showAddModal}
-    {#await import("../components/AddSourceModal.svelte") then { default: AddSourceModal }}
-      <AddSourceModal
-        onCloseRequest={() => (showAddModal = false)}
-        onSubmit={handleAddSource}
-      />
+    {#await import("../components/AddSourceModal.svelte")}
+      <LoadingModal />
+    {:then { default: AddSourceModal }}
+      <AddSourceModal onCloseRequest={() => (showAddModal = false)} />
+    {:catch error}
+      <div class="error">Error loading modal: {error.message}</div>
     {/await}
   {/if}
 </QueryClientProvider>
@@ -246,4 +290,3 @@
     color: hsl(0, 0%, 100%);
   }
 </style>
-
