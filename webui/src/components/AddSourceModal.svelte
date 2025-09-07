@@ -21,7 +21,7 @@
     name: "",
     display_name: "",
     parameter: "",
-    countback: 50,
+    countback: 200,
     is_disabled: false,
     schedules: [],
   });
@@ -47,6 +47,8 @@
   let selectedSource = $derived(
     $listSourcesResult.data?.sources?.find((s) => s.name === formData.name),
   );
+
+  let sourceSelected = $derived(!!formData.name);
 
   // Get parameter placeholder from selected source
   let parameterPlaceholder = $derived(
@@ -85,14 +87,7 @@
   }
 </script>
 
-<div
-  class="modal-overlay"
-  role="button"
-  tabindex="0"
-  onclick={onCloseRequest}
-  onkeydown={() => {}}
-  aria-label="Close modal"
->
+<div class="modal-overlay" role="button" tabindex="0" aria-label="Close modal">
   <div
     class="modal-content"
     role="dialog"
@@ -136,112 +131,116 @@
             {/each}
           </select>
         {/if}
-        <small>Choose the supported sources</small>
+        <small>Choose supported source</small>
       </div>
 
-      <div class="form-group">
-        <div class="label-with-help">
-          <label for="parameter">
-            Parameters <span class="required">*</span>
+      {#if sourceSelected}
+        <div class="form-group">
+          <div class="label-with-help">
+            <label for="parameter">
+              Parameters <span class="required">*</span>
+            </label>
+            {#if hasParameterHelp}
+              <button
+                type="button"
+                class="help-btn"
+                onclick={() => (showParameterHelp = !showParameterHelp)}
+                aria-label="Show parameter help"
+                title="Show parameter help"
+              >
+                {@render infoIcon()}
+              </button>
+            {/if}
+          </div>
+          <textarea
+            id="parameter"
+            bind:value={formData.parameter}
+            placeholder={parameterPlaceholder}
+            rows="3"
+            required
+          ></textarea>
+          {#if showParameterHelp && selectedSource?.parameterHelp}
+            {#await import("./MarkdownText.svelte") then { default: MarkdownText }}
+              <div class="parameter-help">
+                <MarkdownText text={selectedSource.parameterHelp} />
+              </div>
+            {/await}
+          {/if}
+          <small>Source-specific configuration parameters</small>
+        </div>
+
+        <div class="form-group">
+          <label for="display_name">
+            Display Name <span class="required">*</span>
           </label>
-          {#if hasParameterHelp}
+          <input
+            id="display_name"
+            type="text"
+            bind:value={formData.display_name}
+            placeholder="e.g., Reddit Wallpapers"
+            required
+          />
+          <small>Human-readable name shown in UI</small>
+        </div>
+
+        <div class="form-group">
+          <label for="countback">Count Back</label>
+          <input
+            id="countback"
+            type="number"
+            bind:value={formData.countback}
+            min="0"
+            step="1"
+          />
+          <small>
+            Number of posts to look back when searching (0 or negative value =
+            source default)
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={formData.is_disabled} />
+            Start disabled
+          </label>
+          <small>Source will be created but won't run automatically</small>
+        </div>
+
+        <div class="form-group">
+          <label for="schedule-input">Schedules</label>
+          <div class="schedule-input-group">
+            <input
+              id="schedule-input"
+              type="text"
+              bind:value={scheduleInput}
+              placeholder="0 */6 * * * (cron expression)"
+              onkeydown={(e) =>
+                e.key === "Enter" && (e.preventDefault(), addSchedule())}
+            />
             <button
               type="button"
-              class="help-btn"
-              onclick={() => (showParameterHelp = !showParameterHelp)}
-              aria-label="Show parameter help"
-              title="Show parameter help"
+              onclick={addSchedule}
+              disabled={!scheduleInput.trim()}
             >
-              {@render infoIcon()}
+              Add
             </button>
+          </div>
+          <small>Cron expressions for automated runs</small>
+
+          {#if formData.schedules.length > 0}
+            <div class="schedule-list">
+              {#each formData.schedules as schedule, index}
+                <div class="schedule-item">
+                  <code>{schedule}</code>
+                  <button type="button" onclick={() => removeSchedule(index)}>
+                    ×
+                  </button>
+                </div>
+              {/each}
+            </div>
           {/if}
         </div>
-        <textarea
-          id="parameter"
-          bind:value={formData.parameter}
-          placeholder={parameterPlaceholder}
-          rows="3"
-          required
-        ></textarea>
-        {#if showParameterHelp && selectedSource?.parameterHelp}
-          <div class="parameter-help">
-            {selectedSource.parameterHelp}
-          </div>
-        {/if}
-        <small>Source-specific configuration parameters</small>
-      </div>
-
-      <div class="form-group">
-        <label for="display_name">
-          Display Name <span class="required">*</span>
-        </label>
-        <input
-          id="display_name"
-          type="text"
-          bind:value={formData.display_name}
-          placeholder="e.g., Reddit Wallpapers"
-          required
-        />
-        <small>Human-readable name shown in UI</small>
-      </div>
-
-      <div class="form-group">
-        <label for="countback">Count Back</label>
-        <input
-          id="countback"
-          type="number"
-          bind:value={formData.countback}
-          min="0"
-          step="1"
-        />
-        <small>
-          Number of posts to look back when searching (0 or negative value =
-          source default)
-        </small>
-      </div>
-
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" bind:checked={formData.is_disabled} />
-          Start disabled
-        </label>
-        <small>Source will be created but won't run automatically</small>
-      </div>
-
-      <div class="form-group">
-        <label for="schedule-input">Schedules</label>
-        <div class="schedule-input-group">
-          <input
-            id="schedule-input"
-            type="text"
-            bind:value={scheduleInput}
-            placeholder="0 */6 * * * (cron expression)"
-            onkeydown={(e) =>
-              e.key === "Enter" && (e.preventDefault(), addSchedule())}
-          />
-          <button
-            type="button"
-            onclick={addSchedule}
-            disabled={!scheduleInput.trim()}
-          >
-            Add
-          </button>
-        </div>
-        <small>Cron expressions for automated runs</small>
-
-        {#if formData.schedules.length > 0}
-          <div class="schedule-list">
-            {#each formData.schedules as schedule, index}
-              <div class="schedule-item">
-                <code>{schedule}</code>
-                <button type="button" onclick={() => removeSchedule(index)}>
-                  ×
-                </button>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      {/if}
 
       <div class="form-actions">
         <button type="button" class="btn-secondary" onclick={onCloseRequest}>
@@ -315,11 +314,23 @@
   .modal-content {
     background-color: hsl(0, 0%, 18%);
     border-radius: 8px;
-    max-width: 600px;
+    max-width: 60vw;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 25px 50px hsla(0, 0%, 0%, 0.5);
+  }
+
+  @media (max-width: 500px) {
+    .modal-content {
+      max-width: 100vw;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    .modal-content {
+      max-width: 75vw;
+    }
   }
 
   .modal-header {
@@ -597,9 +608,6 @@
     padding: 0.75rem;
     border-radius: 6px;
     margin-top: 0.5rem;
-    font-size: 0.85rem;
-    line-height: 1.4;
     border: 1px solid hsl(210, 25%, 85%);
-    white-space: pre-wrap;
   }
 </style>
