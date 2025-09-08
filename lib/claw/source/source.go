@@ -20,10 +20,32 @@ type Source interface {
 	// Examples:
 	//   "claw.reddit.v1"
 	//
-	// Names are tied heavily to parameters. If your parameter schema changes,
+	// Names are tied heavily to parameters. If your parameter schema breaking changes,
 	// you should also change the name (e.g. bump the version) to avoid
 	// compatibility issues.
 	Name() string
+
+	// Run runs the source to fetch image Metadata based on the given request.
+	//
+	// Note that Sources must not download the actual image itself (or only download small part of image to get metadata like dimensions if unavailable in conventional means).
+	// Sources must only return the metadata and the download URL as [Image] objects.
+	//
+	// Claw will handle the downloading after running filters and device assignments.
+	Run(ctx context.Context, request Request) (Response, error)
+
+	SourceDescription
+	SourceParameter
+	SourceCountback
+	SourceSchedule
+}
+
+type SourceDescription interface {
+	// Description returns the human-readable description for the source.
+	//
+	// Markdown formatting is supported.
+	//
+	// If empty string is returned, the UI will not show any description.
+	Description() string
 
 	// DisplayName returns the human-readable name for the source.
 	DisplayName() string
@@ -33,10 +55,35 @@ type Source interface {
 
 	// AuthorURL returns where the Author can be found or contacted.
 	AuthorURL() string
+}
+
+type SourceParameter interface {
+	// RequireParameter returns whether this source requires a parameter.
+	//
+	// If required, User are not allowed to submit empty parameter.
+	RequireParameter() bool
+	// ParameterHelp returns the help string for the parameter.
+	//
+	// It should explain what the parameter is and set expectations on what kind of values are allowed.
+	//
+	// If the parameter is very complex, show a brief example and forward to external documentation for more details.
+	//
+	// Markdown formatting is supported.
+	//
+	// If empty string is returned, the UI will not show any help.
+	ParameterHelp() string
+
+	// ParameterPlaceholder returns the placeholder string for the parameter to be shown in the input field.
+	//
+	// If empty string is returned, the UI will use a very generic placeholder like "Enter parameter...". Which is not very helpful.
+	//
+	// It's recommended to return a short hint string or example to help the user understand what kind of value is expected
+	// without the user have to open the help.
+	ParameterPlaceholder() string
 
 	// ValidateTransformParameter validates the parameter for the source and transform the parameter if necessary.
 	//
-	// Sources can use this to normalize a parameter and allows more flexible input from the user.
+	// Sources can implement this method to normalize a parameter and allows more flexible input from the user.
 	//
 	// For example, in source "claw.reddit.v1", the Source accepts the following inputs:
 	//
@@ -45,29 +92,27 @@ type Source interface {
 	//  - claw.reddit.v1 also tries to match casing.
 	//  - If parameter is a user (e.g. u/somebody) -> it will be normalized to user/somebody.
 	//
+	// Then after validation and transformation, the parameter will be normalized to a standard format by claw.reddit.v1.
+	// Basically transform e.g. "https://reddit.com/r/wallpapers" and "user/spez" to "r/wallpapers" and "u/spez" respectively.
+	//
 	// The error message (the .Error() method) must be user friendly and contain all necessary information
 	// to fix the parameter.
 	//
 	// This must return nil error if valid.
 	ValidateTransformParameter(ctx context.Context, param string) (transformed string, err error)
+}
 
-	// ParameterHelp returns the help string for the parameter.
+type SourceCountback interface {
+	// DefaultCountback returns the default countback hint for the UI to show
+	// to the user.
 	//
-	// Markdown formatting is supported, but any Javascript will be stripped.
-	ParameterHelp() string
-
-	// ParameterPlaceholder returns the placeholder string for the parameter.
+	// Source implementation should return take notes of API rate limits
+	// the source might have, and return a reasonable default value that
+	// won't easily hit the rate limit.
 	//
-	// This is usually a very short string to show as a hint for the user.
-	ParameterPlaceholder() string
-
-	// Run runs the source to fetch image Metadata based on the given request.
-	//
-	// Note that Sources must not download the actual image itself (or only download small part of image to get metadata like dimensions if unavailable in conventional means).
-	// Sources must only return the metadata and the download URL as [Image] objects.
-	//
-	// Claw will handle the downloading after running filters and device assignments.
-	Run(ctx context.Context, request Request) (Response, error)
+	// Note that claw will still pass 0 or negative countback to the Run
+	// method if the user specifies that value.
+	DefaultCountback() int
 }
 
 type Request struct {

@@ -20,7 +20,21 @@ type Doer interface {
 var _ source.Source = (*Reddit)(nil)
 
 type Reddit struct {
+	source.UnimplementedSource
+
 	Client Doer
+}
+
+func (re Reddit) Description() string {
+	return `Fetches images from a Reddit user or subreddit.`
+}
+
+func (re Reddit) RequireParameter() bool {
+	return true
+}
+
+func (re Reddit) DefaultCountback() int {
+	return 300
 }
 
 const helpString = /*markdown*/
