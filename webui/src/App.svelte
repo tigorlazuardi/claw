@@ -6,11 +6,17 @@
 
 <Routing>
   <main
-    data-theme="winter"
-    class="flex h-screen w-screen bg-gray-900 text-gray-100 m-0 p-0"
+    data-theme="caramellatte"
+    class="flex h-screen w-screen bg-base-100 text-gray-100 m-0 p-0"
   >
     <Sidebar>
-      <RouterView />
+      <RouterView>
+        {#snippet loading()}
+          {#await import("./components/RoutingTransition.svelte") then { default: RoutingTransition }}
+            <RoutingTransition />
+          {/await}
+        {/snippet}
+      </RouterView>
     </Sidebar>
   </main>
 </Routing>

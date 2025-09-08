@@ -7,13 +7,18 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
-  <div class="page-content">
-    <div class="page-header">
+  <div class="p-[2rem] 2xl:max-w-[60vw] max-w-full m-auto">
+    <div class="flex justify-between items-start mb-[2rem]">
       <div>
-        <h1>Sources</h1>
-        <p>Configure and manage your image sources</p>
+        <h1 class="text-4xl text-base-content">Sources</h1>
+        <p class="text-lg font-light text-base-content/70">
+          Configure and manage your image sources
+        </p>
       </div>
-      <button class="add-btn" onclick={() => (showAddModal = true)}>
+      <button
+        class="btn btn-lg btn-primary"
+        onclick={() => (showAddModal = true)}
+      >
         + Add
       </button>
     </div>
@@ -142,54 +147,11 @@
       <LoadingModal />
     {:then { default: AddSourceModal }}
       <AddSourceModal onCloseRequest={() => (showAddModal = false)} />
-    {:catch error}
-      <div class="error">Error loading modal: {error.message}</div>
     {/await}
   {/if}
 </QueryClientProvider>
 
 <style>
-  .page-content {
-    padding: 2rem;
-    max-width: 1200px;
-  }
-
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 2rem;
-  }
-
-  .page-header h1 {
-    margin: 0 0 1rem 0;
-    font-size: 2rem;
-    font-weight: 600;
-    color: hsl(0, 0%, 100%);
-  }
-
-  .page-header p {
-    color: hsl(0, 0%, 67%);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  .add-btn {
-    padding: 0.75rem 1.5rem;
-    background-color: hsl(235, 100%, 65%);
-    color: hsl(0, 0%, 100%);
-    border: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-
-  .add-btn:hover {
-    background-color: hsl(235, 85%, 60%);
-  }
-
   .sources-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

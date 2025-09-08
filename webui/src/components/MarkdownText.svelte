@@ -11,4 +11,6 @@
   const md = $state(text);
 </script>
 
-<Markdown {md} {plugins} />
+<div class="prose prose-li:leading-none">
+  <Markdown {md} {plugins} />
+</div>
