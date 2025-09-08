@@ -5,6 +5,7 @@ package claw.v1;
 import "buf/validate/validate.proto";
 import "claw/v1/pagination.proto";
 import "claw/v1/source.proto";
+import "google/protobuf/timestamp.proto";
 
 // SourceSortField defines the fields that can be used for sorting sources
 enum SourceSortField {
@@ -38,6 +39,9 @@ service SourceService {
 
   // List available source types that can be added
   rpc ListAvailableSources(ListAvailableSourcesRequest) returns (ListAvailableSourcesResponse);
+
+  // Get the next run time for a cron expression. The time is adjusted to the server's time zone.
+  rpc GetCronNextTime(GetCronNextTimeRequest) returns (GetCronNextTimeResponse);
 }
 
 // Create source request
@@ -195,10 +199,31 @@ message AvailableSource {
 
   // Placeholder text for the parameter input
   string parameter_placeholder = 6;
+
+  bool require_parameter = 7;
+
+  string description = 8;
+
+  int32 default_countback = 9;
+
+  bool have_schedule_conflict_check = 10;
 }
 
 // List available sources response
 message ListAvailableSourcesResponse {
   // List of available source types
   repeated AvailableSource sources = 1;
+}
+
+// Get cron next time request
+message GetCronNextTimeRequest {
+  // Cron expression to evaluate
+  string cron_expression = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// Get cron next time response
+message GetCronNextTimeResponse {
+  // Next scheduled time based on the cron expression adjusted to
+  // server's time zone.
+  google.protobuf.Timestamp next_time = 1;
 }

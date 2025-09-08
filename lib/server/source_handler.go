@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
+	"github.com/adhocore/gronx"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // SourceHandler implements the ConnectRPC SourceService interface
@@ -73,6 +75,27 @@ func (h *SourceHandler) ListAvailableSources(ctx context.Context, req *connect.R
 	return connect.NewResponse(resp), nil
 }
 
+// GetCronNextTime handles cron expression next time calculation
+func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Request[clawv1.GetCronNextTimeRequest]) (*connect.Response[clawv1.GetCronNextTimeResponse], error) {
+	gron := gronx.New()
+
+	// Validate the cron expression
+	if !gron.IsValid(req.Msg.CronExpression) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+	}
+
+	// Get the next run time
+	nextTime, err := gronx.NextTick(req.Msg.CronExpression, true)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	resp := &clawv1.GetCronNextTimeResponse{
+		NextTime: timestamppb.New(nextTime),
+	}
+
+	return connect.NewResponse(resp), nil
+}
+
 // Ensure SourceHandler implements the SourceServiceHandler interface
 var _ clawv1connect.SourceServiceHandler = (*SourceHandler)(nil)
-

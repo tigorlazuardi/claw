@@ -33,6 +33,7 @@ require (
 )
 
 require (
+	github.com/adhocore/gronx v1.19.6 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
