@@ -112,8 +112,6 @@
     $listSourcesResult.data?.sources?.find((s) => s.name === $name.value),
   );
 
-  let sourceSelected = $derived(!!selectedSource);
-
   // Get parameter placeholder from selected source
   let parameterPlaceholder = $derived(
     selectedSource?.parameterPlaceholder ||

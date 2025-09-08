@@ -1,0 +1,247 @@
+<script lang="ts">
+  import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
+  import { form as formValidator, field } from "svelte-forms";
+  import { required } from "svelte-forms/validators";
+  import type { M } from "../types";
+  import type {
+    AvailableSource,
+    CreateSourceRequest,
+    ListAvailableSourcesResponse,
+  } from "../gen/claw/v1/source_service_pb";
+  import IconX from "@lucide/svelte/icons/x";
+  import IconInfo from "@lucide/svelte/icons/info";
+  import {
+    createCombobox,
+    melt,
+    type ComboboxOptionProps,
+  } from "@melt-ui/svelte";
+
+  interface Props {
+    /**
+     * Callback when the modal is requesting to be closed or removed from the DOM.
+     * This will be called when the user clicks the close button, cancel button,
+     * or the server responds with success after form submission.
+     *
+     * This function will not be called if the user clicks outside the modal or press the escape key
+     * to prevent accidental closure.
+     */
+    onCloseRequest: () => void;
+  }
+
+  const name = field("name", "", [required()]);
+  const parameter = field("parameter", "");
+  const displayName = field("display_name", "", [required()]);
+  const countback = field("countback", 0);
+  const isDisabled = field("is_disabled", false);
+  const runOnCreation = field("run_on_creation", false);
+
+  let scheduleExpressionError = $state<string | undefined>();
+  const scheduleInput = field("schedule", "", [
+    async (val: string) => {
+      if (val.trim() === "") {
+        scheduleExpressionError = undefined;
+        return { valid: true, name: "cron_format" };
+      }
+      const { CronExpressionParser } = await import("cron-parser");
+      try {
+        CronExpressionParser.parse(val);
+        scheduleExpressionError = undefined;
+        return { valid: true, name: "cron_format" };
+      } catch (e) {
+        scheduleExpressionError =
+          "invalid cron expression: " + (e as Error).message;
+        return { valid: false, name: "cron_format" };
+      }
+    },
+  ]);
+  type Schedule = {
+    pattern: string;
+    nextRun?: Date;
+  };
+  const schedules = $state<Schedule[]>([]);
+  const addSourceForm = formValidator(
+    name,
+    parameter,
+    displayName,
+    countback,
+    isDisabled,
+    scheduleInput,
+    runOnCreation,
+  );
+
+  const { onCloseRequest }: Props = $props();
+
+  async function createConnectClient() {
+    const { createClient } = await import("@connectrpc/connect");
+    const { createConnectTransport } = await import("@connectrpc/connect-web");
+    const { SourceService } = await import("../gen/claw/v1/source_service_pb");
+    const transport = createConnectTransport({
+      baseUrl: import.meta.env.BASE_URL,
+    });
+    return createClient(SourceService, transport);
+  }
+
+  type ConnectClient = Awaited<ReturnType<typeof createConnectClient>>;
+
+  let connectClient = $state<ConnectClient | undefined>();
+  async function getClient() {
+    if (!connectClient) {
+      connectClient = await createConnectClient();
+    }
+    return connectClient;
+  }
+
+  async function postCreateSource() {
+    if (!$addSourceForm.valid) {
+      return;
+    }
+    const data: M<CreateSourceRequest> = {
+      name: $name.value,
+      parameter: $parameter.value,
+      displayName: $displayName.value,
+      countback: $countback.value,
+      isDisabled: $isDisabled.value,
+      schedules: schedules.map((s) => s.pattern),
+    };
+    return getClient().then((client) => client.createSource(data));
+  }
+
+  let serverErrorResponse = $state<Error | null>(null);
+  let isSubmitting = $state(false);
+  async function handleOnSubmit() {
+    isSubmitting = true;
+    return postCreateSource()
+      .then(async (res) => {
+        if (!res) return;
+        const queryClient = useQueryClient();
+        queryClient.invalidateQueries(["sources", "list"]);
+        onCloseRequest();
+      })
+      .catch((err: Error) => (serverErrorResponse = err))
+      .finally(() => (isSubmitting = false));
+  }
+  let showParameterHelp = $state(false);
+  async function listSources() {
+    return getClient().then((client) => client.listAvailableSources({}));
+  }
+
+  const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
+  let selectedSource = $derived(
+    $listSourcesResult.data?.sources?.find((s) => s.name === $name.value),
+  );
+  let hasParameterHelp = $derived(
+    selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
+  );
+
+  async function addSchedule() {
+    await scheduleInput.validate();
+    if ($addSourceForm.hasError("schedule.cron_format")) return;
+    const { CronExpressionParser } = await import("cron-parser");
+    schedules.push({
+      pattern: $scheduleInput.value,
+      nextRun: $scheduleInput.value
+        ? CronExpressionParser.parse($scheduleInput.value).next().toDate()
+        : undefined,
+    });
+    scheduleInput.reset();
+  }
+</script>
+
+<div class="modal">
+  <div class="modal-box">
+    {@render modalHeader()}
+    <div class="divider"></div>
+    <form
+      class="w-full"
+      onsubmit={(e) => {
+        e.preventDefault();
+        handleOnSubmit();
+      }}
+    >
+      {@render selectSourceInput()}
+      {#if selectedSource}
+        {@render parameterInput(selectedSource)}
+      {/if}
+    </form>
+  </div>
+</div>
+
+{#snippet modalHeader()}
+  <div id="modal-header" class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl">Add New Source</h2>
+    <button class="btn btn-square" onclick={onCloseRequest}>
+      <IconX />
+    </button>
+  </div>
+{/snippet}
+
+{#snippet selectSourceInput()}
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      Source <span class="text-error">*</span>
+    </legend>
+    {#if $listSourcesResult.isLoading}
+      <select class="select">
+        <option
+          disabled
+          selected
+          value=""
+          class="loading loading-spinner"
+        ></option>
+      </select>
+      <span class="label">Getting list of sources. Please wait...</span>
+    {:else if $listSourcesResult.isSuccess}
+      {@const sources = $listSourcesResult.data.sources}
+      <select class="select" bind:value={$name.value} required>
+        {#if sources.length === 1}
+          <option selected value={sources[0].name}>
+            {sources[0].displayName} ({sources[0].name})
+          </option>
+        {:else}
+          <option disabled selected value="">-- select a source --</option>
+          {#each sources as source (source.name)}
+            <option value={source.name}>
+              {source.displayName} ({source.name})
+            </option>
+          {/each}
+        {/if}
+      </select>
+      <span class="label">Choose supported source</span>
+    {:else}
+      <select class="select">
+        <option disabled selected value="">-- error loading sources --</option>
+      </select>
+      <span class="label text-error">
+        Error loading sources: {$listSourcesResult.error}
+      </span>
+    {/if}
+  </fieldset>
+{/snippet}
+
+{#snippet parameterInput(source: AvailableSource)}
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      <span>Configuration Parameters</span>
+      {#if source.parameterHelp}
+        <button
+          class="btn btn-square"
+          onclick={() => (showParameterHelp = !showParameterHelp)}
+        >
+          <IconInfo />
+        </button>
+      {/if}
+    </legend>
+    <textarea
+      class="textarea h-[3rem]"
+      placeholder={source.parameterPlaceholder ||
+        "Configuration parameters (JSON, comma-separated values, etc.)"}
+      bind:value={$parameter.value}
+      required={source.requireParameter}
+    ></textarea>
+    {#if source.requireParameter}
+      <span class="label">Required</span>
+    {:else}
+      <span class="label">Optional</span>
+    {/if}
+  </fieldset>
+{/snippet}
