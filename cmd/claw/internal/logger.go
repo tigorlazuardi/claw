@@ -2,7 +2,11 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 // LogHandler is a slog.LogHandler that groups all non-standard attributes into a "details" group
@@ -33,4 +37,12 @@ func (lo LogHandler) WithGroup(name string) slog.Handler {
 	return LogHandler{
 		Handler: lo.Handler.WithGroup(name),
 	}
+}
+
+func transformProtoToLog(msg proto.Message) slog.Value {
+	b, err := protojson.Marshal(msg)
+	if err != nil {
+		return slog.StringValue("!ERROR:" + err.Error())
+	}
+	return slog.AnyValue(json.RawMessage(b))
 }

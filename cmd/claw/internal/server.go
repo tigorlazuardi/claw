@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
@@ -73,20 +74,28 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	// Create HTTP mux and register ConnectRPC handlers
 	mux := http.NewServeMux()
 
-	// Register all service handlers
-	sourcePath, sourceHandlerHTTP := clawv1connect.NewSourceServiceHandler(sourceHandler)
+	// Create logging interceptor
+	loggingInterceptor := server.LoggingInterceptor(slog.Default())
+
+	// Register all service handlers with interceptor
+	sourcePath, sourceHandlerHTTP := clawv1connect.NewSourceServiceHandler(sourceHandler,
+		connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(sourcePath, sourceHandlerHTTP)
 
-	devicePath, deviceHandlerHTTP := clawv1connect.NewDeviceServiceHandler(deviceHandler)
+	devicePath, deviceHandlerHTTP := clawv1connect.NewDeviceServiceHandler(deviceHandler,
+		connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(devicePath, deviceHandlerHTTP)
 
-	imagePath, imageHandlerHTTP := clawv1connect.NewImageServiceHandler(imageHandler)
+	imagePath, imageHandlerHTTP := clawv1connect.NewImageServiceHandler(imageHandler,
+		connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(imagePath, imageHandlerHTTP)
 
-	tagPath, tagHandlerHTTP := clawv1connect.NewTagServiceHandler(tagHandler)
+	tagPath, tagHandlerHTTP := clawv1connect.NewTagServiceHandler(tagHandler,
+		connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(tagPath, tagHandlerHTTP)
 
-	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler)
+	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler,
+		connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(jobPath, jobHandlerHTTP)
 
 	mux.Handle("/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

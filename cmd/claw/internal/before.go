@@ -11,6 +11,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/urfave/cli/v3"
+	"google.golang.org/protobuf/proto"
 )
 
 var cwd, _ = os.Getwd()
@@ -27,6 +28,9 @@ func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
 			if source, ok := a.Value.Any().(*slog.Source); ok {
 				source.File = strings.TrimPrefix(source.File, cwd+string(os.PathSeparator))
 				source.Function = strings.TrimPrefix(source.Function, "github.com/tigorlazuardi/claw/")
+			}
+			if m, ok := a.Value.Any().(proto.Message); ok {
+				a.Value = transformProtoToLog(m)
 			}
 			return a
 		},
