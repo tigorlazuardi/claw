@@ -14,12 +14,16 @@ func (claw *Claw) ListAvailableSources(ctx context.Context, req *clawv1.ListAvai
 	// Iterate through all registered backends
 	for _, backend := range claw.scheduler.backends {
 		availableSource := &clawv1.AvailableSource{
-			Name:                 backend.Name(),
-			DisplayName:          backend.DisplayName(),
-			Author:               backend.Author(),
-			AuthorUrl:            backend.AuthorURL(),
-			ParameterHelp:        backend.ParameterHelp(),
-			ParameterPlaceholder: backend.ParameterPlaceholder(),
+			Name:                      backend.Name(),
+			DisplayName:               backend.DisplayName(),
+			Author:                    backend.Author(),
+			AuthorUrl:                 backend.AuthorURL(),
+			ParameterHelp:             backend.ParameterHelp(),
+			ParameterPlaceholder:      backend.ParameterPlaceholder(),
+			RequireParameter:          backend.RequireParameter(),
+			Description:               backend.Description(),
+			DefaultCountback:          int32(backend.DefaultCountback()),
+			HaveScheduleConflictCheck: backend.HaveScheduleConflictCheck(),
 		}
 		availableSources = append(availableSources, availableSource)
 	}
@@ -28,4 +32,3 @@ func (claw *Claw) ListAvailableSources(ctx context.Context, req *clawv1.ListAvai
 		Sources: availableSources,
 	}, nil
 }
-

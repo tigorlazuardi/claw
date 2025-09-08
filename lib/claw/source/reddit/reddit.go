@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/tigorlazuardi/claw/lib/claw/source"
 )
@@ -23,6 +24,67 @@ type Reddit struct {
 	source.UnimplementedSource
 
 	Client Doer
+}
+
+// HaveScheduleConflictCheck returns whether this source has custom schedule conflict check.
+// Usually to avoid schedule too close to each other causing rate limit issues.
+//
+// If true, Claw will call [ScheduleConflictCheck] to check for schedule conflicts.
+func (re Reddit) HaveScheduleConflictCheck() bool {
+	return true
+}
+
+// ScheduleConflictCheck returns a warning message if the given schedule has conflicts
+// against this source's requirements.
+//
+// Returning empty string means no conflicts.
+//
+// Return a human friendly message to inform the user about the conflict
+// and the reason why.
+//
+// Markdown formatting is supported in the UI.
+//
+// Received Schedules are already filtered to only contain schedules
+// that belongs to this source (filtered by source name).
+func (re *Reddit) ScheduleConflictCheck(req source.ScheduleConflictCheckRequest) string {
+	s := &strings.Builder{}
+	for _, sch := range req.Schedules {
+		for _, scheduleRun := range sch.NextRuns {
+			if req.UserNextRun.Weekday() != scheduleRun.Weekday() {
+				continue
+			}
+			if req.UserNextRun.Hour() != scheduleRun.Hour() {
+				continue
+			}
+			diff := getClockDelta(req.UserNextRun, scheduleRun)
+			if diff < time.Minute*10 { // less than 10 minutes apart
+				if s.Len() == 0 {
+					s.WriteString("⚠️ **Schedule Conflict Warning** ⚠️\n\n")
+					s.WriteString("The following schedules are too close to each other on the next run. This may cause rate limit issues with Reddit API.\n\n")
+					fmt.Fprintf(s, "Your next run is at %s (server adjusted time), which will conflict with:\n\n", req.UserNextRun.Format(time.RFC850))
+				}
+				fmt.Fprintf(s, "- Next schedule run at %s (difference: %s) from parameter %q.\n",
+					scheduleRun.Format(time.RFC850),
+					diff.String(),
+					sch.Source.Parameter,
+				)
+			}
+		}
+	}
+	if s.Len() > 0 {
+		s.WriteString("\n")
+		s.WriteString("To avoid the API rate limit issues, set your new schedule(s) at least 10 minutes apart from each other from existing ones.\n")
+	}
+	return s.String()
+}
+
+func getClockDelta(t1, t2 time.Time) time.Duration {
+	t1a := time.Date(t1.Year(), t1.Month(), t1.Day(), t2.Hour(), t2.Minute(), t2.Second(), t2.Nanosecond(), t2.Location())
+	dur := t1.Sub(t1a)
+	if dur < 0 {
+		dur *= -1 // make it positive
+	}
+	return dur
 }
 
 func (re Reddit) Description() string {

@@ -35,6 +35,6 @@ type ScheduleConflictCheckRequest struct {
 }
 
 type Schedule struct {
-	Source    model.Sources
-	Schedules []model.Schedules
+	Source   model.Sources
+	NextRuns []time.Time
 }
