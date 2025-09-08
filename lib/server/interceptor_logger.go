@@ -59,15 +59,10 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 		duration := time.Since(start)
 
 		// Extract response body if successful
-		var respBody json.RawMessage
+		var respBody any
 		var responseHeaders map[string][]string
 		if err == nil && resp != nil {
-			if msg, ok := resp.Any().(proto.Message); ok {
-				if bodyBytes, err := protojson.Marshal(msg); err == nil {
-					respBody = json.RawMessage(bodyBytes)
-				}
-			}
-
+			respBody = resp.Any()
 			// Extract response headers
 			responseHeaders = make(logHeader)
 			maps.Copy(responseHeaders, resp.Header())

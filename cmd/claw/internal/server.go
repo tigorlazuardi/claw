@@ -107,11 +107,17 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Vite fragment: %w", err)
 	}
-	mux.Handle("/", CreateWebuiHandler(WebUIConfig{
+	
+	// Create WebUI handler with logging middleware
+	webuiHandler := CreateWebuiHandler(WebUIConfig{
 		Fragment: webuiFragment,
 		DistFS:   distFS,
 		Logger:   slog.Default(),
-	}))
+	})
+	
+	// Wrap WebUI handler with HTTP logging middleware
+	httpLoggingMiddleware := server.HTTPLoggingMiddleware(slog.Default())
+	mux.Handle("/", httpLoggingMiddleware(webuiHandler))
 
 	listener := cfg.Server.Host
 	if listener == nil {
