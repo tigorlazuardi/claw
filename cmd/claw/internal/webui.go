@@ -2,7 +2,6 @@ package internal
 
 import (
 	"embed"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
@@ -36,7 +35,6 @@ func CreateWebuiHandler(config WebUIConfig) http.Handler {
 	fileServer := http.FileServer(http.FS(config.DistFS))
 	mux := http.NewServeMux()
 	if cfg.Server.WebUI.DevMode {
-		fmt.Println("called =========>")
 		mux.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
 	} else {
 		mux.Handle("/assets", http.StripPrefix("/assets", fileServer))
