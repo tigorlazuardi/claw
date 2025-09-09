@@ -1,4 +1,24 @@
 <script lang="ts">
+  import {
+    Sidebar,
+    SidebarBrand,
+    SidebarButton,
+    SidebarCta,
+    SidebarDropdownItem,
+    SidebarDropdownWrapper,
+    SidebarGroup,
+    SidebarItem,
+    SidebarWrapper,
+  } from "flowbite-svelte";
+  import {
+    HomeOutline,
+    ImageOutline,
+    DesktopPcOutline,
+    DatabaseOutline,
+    CheckOutline,
+    CogOutline,
+    BarsOutline,
+  } from "flowbite-svelte-icons";
   import { useRouter } from "@dvcol/svelte-simple-router/router";
   import { link } from "@dvcol/svelte-simple-router";
   import IconHouse from "@lucide/svelte/icons/house";
@@ -12,6 +32,21 @@
   interface Props {
     children: Snippet;
   }
+
+  let innerWidth = $state(window.innerWidth);
+  let isMobile = $derived(innerWidth < 640);
+  let isOpen = $state(false);
+  let isExpanded = $state(false);
+  $effect(() => {
+    // Use $effect so only run once on component mount.
+    if (window.innerWidth >= 640) {
+      isOpen = true;
+    }
+
+    if (window.innerWidth >= 1280) {
+      isExpanded = true;
+    }
+  });
 
   let { children }: Props = $props();
 
@@ -56,41 +91,10 @@
   ];
 </script>
 
-<div class="drawer drawer-open">
-  <input id="sidebar-toggle" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-content">
-    {@render children()}
-  </div>
-  <div class="drawer-side">
-    <label
-      for="my-drawer"
-      aria-label="close sidebar"
-      class="drawer-overlay"
-    ></label>
-    <aside class="flex flex-col justify-between h-screen bg-primary">
-      <!-- Spacer to push nav-links to center -->
-      <div></div>
+<svelte:window bind:innerWidth />
 
-      <div id="nav-links" class="m-auto flex flex-col">
-        {#each items as item (item.id)}
-          <a
-            href={item.href}
-            class={{
-              "btn btn-sm btn-primary flex-col h-[4rem] rounded-none": true,
-              "btn-secondary": location?.name === item.id,
-            }}
-            use:link
-          >
-            <item.Icon />
-            {item.label}
-          </a>
-        {/each}
-      </div>
-      <button
-        class="btn btn-sm mx-auto w-full btn-primary h-[4rem] rounded-none"
-      >
-        <IconSettings />
-      </button>
-    </aside>
-  </div>
-</div>
+{#if isMobile}
+  {#await import("flowbite-svelte") then { SidebarButton }}
+    <SidebarButton onclick={() => (isOpen = !isOpen)} class="mb-2" />
+  {/await}
+{/if}
