@@ -6,15 +6,9 @@
   import type {
     AvailableSource,
     CreateSourceRequest,
-    ListAvailableSourcesResponse,
   } from "../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
-  import {
-    createCombobox,
-    melt,
-    type ComboboxOptionProps,
-  } from "@melt-ui/svelte";
 
   interface Props {
     /**
@@ -169,7 +163,11 @@
 {#snippet modalHeader()}
   <div id="modal-header" class="flex justify-between items-center mb-4">
     <h2 class="text-2xl">Add New Source</h2>
-    <button class="btn btn-square btn-ghost" onclick={onCloseRequest}>
+    <button
+      class="btn btn-square btn-ghost"
+      type="button"
+      onclick={onCloseRequest}
+    >
       <IconX />
     </button>
   </div>
@@ -178,7 +176,17 @@
 {#snippet selectSourceInput()}
   <fieldset class="fieldset">
     <legend class="fieldset-legend">
-      Source <span class="text-error">*</span>
+      <span>
+        Source <span class="text-error">*</span>
+      </span>
+      {#if selectedSource?.description}
+        {#await import("../components/InfoPopoverMarkdown.svelte") then { default: InfoPopoverMarkdown }}
+          <InfoPopoverMarkdown
+            content={selectedSource.description}
+            headerText={selectedSource.displayName || selectedSource.name}
+          />
+        {/await}
+      {/if}
     </legend>
     {#if $listSourcesResult.isLoading}
       <select class="select">
@@ -192,19 +200,17 @@
       <span class="label">Getting list of sources. Please wait...</span>
     {:else if $listSourcesResult.isSuccess}
       {@const sources = $listSourcesResult.data.sources}
-      <select class="select" bind:value={$name.value} required>
-        {#if sources.length === 1}
-          <option selected value={sources[0].name}>
-            {sources[0].displayName} ({sources[0].name})
+      <select class="select w-full" bind:value={$name.value} required>
+        {#if !selectedSource}
+          <option disabled value="" class="text-base-100">
+            -- select a source --
           </option>
-        {:else}
-          <option disabled selected value="">-- select a source --</option>
-          {#each sources as source (source.name)}
-            <option value={source.name}>
-              {source.displayName} ({source.name})
-            </option>
-          {/each}
         {/if}
+        {#each sources as source (source.name)}
+          <option value={source.name}>
+            {source.displayName} ({source.name})
+          </option>
+        {/each}
       </select>
       <span class="label">Choose supported source</span>
     {:else}
@@ -221,10 +227,14 @@
 {#snippet parameterInput(source: AvailableSource)}
   <fieldset class="fieldset">
     <legend class="fieldset-legend">
-      <span>Configuration Parameters</span>
+      <span>Parameters</span>
+      {#if source.requireParameter}
+        <span class="text-error">*</span>
+      {/if}
       {#if source.parameterHelp}
         <button
-          class="btn btn-square"
+          class="btn btn-square btn-ghost btn-xs"
+          type="button"
           onclick={() => (showParameterHelp = !showParameterHelp)}
         >
           <IconInfo />
@@ -232,7 +242,7 @@
       {/if}
     </legend>
     <textarea
-      class="textarea h-[3rem]"
+      class="textarea h-[3rem] w-full"
       placeholder={source.parameterPlaceholder ||
         "Configuration parameters (JSON, comma-separated values, etc.)"}
       bind:value={$parameter.value}
