@@ -6,8 +6,8 @@
 
 <Routing>
   <main
-    data-theme="caramellatte"
-    class="flex h-screen w-screen bg-base-100 text-gray-100 m-0 p-0"
+    data-theme="nord"
+    class="flex h-screen w-screen bg-base-100 text-base-content m-0 p-0"
   >
     <Sidebar>
       <RouterView>

@@ -147,8 +147,8 @@
   }
 </script>
 
-<div class="modal">
-  <div class="modal-box">
+<div class="modal modal-open">
+  <div class="modal-box xl:w-[60vw] xl:max-w-[60vw]">
     {@render modalHeader()}
     <div class="divider"></div>
     <form
@@ -169,7 +169,7 @@
 {#snippet modalHeader()}
   <div id="modal-header" class="flex justify-between items-center mb-4">
     <h2 class="text-2xl">Add New Source</h2>
-    <button class="btn btn-square" onclick={onCloseRequest}>
+    <button class="btn btn-square btn-ghost" onclick={onCloseRequest}>
       <IconX />
     </button>
   </div>

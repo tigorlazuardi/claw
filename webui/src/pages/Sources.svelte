@@ -143,7 +143,7 @@
   </div>
 
   {#if showAddModal}
-    {#await import("../components/AddSourceModal.svelte")}
+    {#await import("../surfaces/AddSource.svelte")}
       <LoadingModal />
     {:then { default: AddSourceModal }}
       <AddSourceModal onCloseRequest={() => (showAddModal = false)} />

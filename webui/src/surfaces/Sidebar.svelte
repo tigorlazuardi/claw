@@ -71,7 +71,7 @@
       <!-- Spacer to push nav-links to center -->
       <div></div>
 
-      <div id="nav-links" class="m-auto flex flex-col gap-4">
+      <div id="nav-links" class="m-auto flex flex-col">
         {#each items as item (item.id)}
           <a
             href={item.href}
