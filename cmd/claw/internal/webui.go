@@ -20,8 +20,10 @@ var indexTemplate = template.Must(template.New("").Parse( /*html*/
 	<title>{{if .WebUI.Title}}{{.WebUI.Title}}{{else}}Claw{{end}}</title>
 	{{- .Vite.Tags -}}
 </head>
-<body>
-	<div id="app"></div>
+<body id="app">
+	<noscript>
+		<strong>Claw application requires Javascript to allow the Web UI to function</strong>
+	</noscript>
 </body>
 `))
 

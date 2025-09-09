@@ -1,37 +1,13 @@
 <script lang="ts">
-  import {
-    Sidebar,
-    SidebarBrand,
-    SidebarButton,
-    SidebarCta,
-    SidebarDropdownItem,
-    SidebarDropdownWrapper,
-    SidebarGroup,
-    SidebarItem,
-    SidebarWrapper,
-  } from "flowbite-svelte";
-  import {
-    HomeOutline,
-    ImageOutline,
-    DesktopPcOutline,
-    DatabaseOutline,
-    CheckOutline,
-    CogOutline,
-    BarsOutline,
-  } from "flowbite-svelte-icons";
+  import { Sidebar, SidebarGroup, SidebarItem } from "flowbite-svelte";
   import { useRouter } from "@dvcol/svelte-simple-router/router";
-  import { link } from "@dvcol/svelte-simple-router";
   import IconHouse from "@lucide/svelte/icons/house";
   import IconImage from "@lucide/svelte/icons/image";
   import IconMonitorSmartphone from "@lucide/svelte/icons/monitor-smartphone";
   import IconDatabase from "@lucide/svelte/icons/database";
-  import IconTask from "@lucide/svelte/icons/layout-list";
+  import IconTask from "@lucide/svelte/icons/square-check-big";
+  import IconChevronsDown from "@lucide/svelte/icons/chevrons-down";
   import IconSettings from "@lucide/svelte/icons/settings";
-  import { type Snippet } from "svelte";
-
-  interface Props {
-    children: Snippet;
-  }
 
   let innerWidth = $state(window.innerWidth);
   let isMobile = $derived(innerWidth < 640);
@@ -47,8 +23,6 @@
       isExpanded = true;
     }
   });
-
-  let { children }: Props = $props();
 
   function withBaseURL(str: string) {
     return (import.meta.env.BASE_URL || "/") + str;
@@ -98,3 +72,50 @@
     <SidebarButton onclick={() => (isOpen = !isOpen)} class="mb-2" />
   {/await}
 {/if}
+
+<Sidebar
+  backdrop={isMobile}
+  {isOpen}
+  closeSidebar={() => (isOpen = false)}
+  class="w-24 static"
+  divClass="h-screen flex flex-col justify-between w-full px-0"
+>
+  <SidebarGroup>
+    <SidebarItem
+      aClass="flex-col justify-center items-center gap-2"
+      spanClass="mx-0"
+      label="Claw"
+    >
+      {#snippet icon()}
+        <IconChevronsDown />
+      {/snippet}
+    </SidebarItem>
+  </SidebarGroup>
+  <SidebarGroup>
+    {#each items as item (item.id)}
+      <SidebarItem
+        label={item.label}
+        class="hover:cursor-pointer"
+        aClass="flex-col justify-center items-center gap-2"
+        onclick={() => router.push({ name: item.id })}
+        spanClass="mx-0"
+        active={location?.name === item.id}
+      >
+        {#snippet icon()}
+          <item.Icon />
+        {/snippet}
+      </SidebarItem>
+    {/each}
+  </SidebarGroup>
+  <SidebarGroup>
+    <SidebarItem
+      aClass="flex-col justify-center items-center gap-2"
+      spanClass="mx-0"
+      label="Settings"
+    >
+      {#snippet icon()}
+        <IconSettings />
+      {/snippet}
+    </SidebarItem>
+  </SidebarGroup>
+</Sidebar>

@@ -5,11 +5,9 @@
 </script>
 
 <Routing>
-  <main
-    data-theme="nord"
-    class="flex h-screen w-screen bg-base-100 text-base-content m-0 p-0"
-  >
-    <Sidebar>
+  <main class="flex h-screen w-screen">
+    <Sidebar />
+    <div class="flex-1">
       <RouterView>
         {#snippet loading()}
           {#await import("./components/RoutingTransition.svelte") then { default: RoutingTransition }}
@@ -17,6 +15,6 @@
           {/await}
         {/snippet}
       </RouterView>
-    </Sidebar>
+    </div>
   </main>
 </Routing>
