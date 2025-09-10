@@ -127,8 +127,9 @@ func (scheduler *scheduler) getJobs(ctx context.Context) ([]model.Jobs, error) {
 func (scheduler *scheduler) enqueueJobs(jobs []model.Jobs) {
 	for _, job := range jobs {
 		scheduler.tracker.Add(*job.ID)
+		scheduler.logger.Info("enqueuing job", "job_id", job.ID, "source_id", job.SourceID, "schedule_id", job.ScheduleID)
 		scheduler.queue <- job
-		scheduler.logger.Info("Enqueuing job", "job_id", job.ID, "source_id", job.SourceID, "schedule_id", job.ScheduleID)
+		scheduler.logger.Info("job run", "job_id", job.ID, "source_id", job.SourceID, "schedule_id", job.ScheduleID)
 	}
 }
 
