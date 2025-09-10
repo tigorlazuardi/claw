@@ -14,14 +14,19 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/networkteam/go-sqllogger"
 	"github.com/tigorlazuardi/claw/lib/claw"
+	"github.com/tigorlazuardi/claw/lib/dblogger"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/tigorlazuardi/claw/migrations"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	_ "modernc.org/sqlite"
+
+	sqlite "github.com/ncruces/go-sqlite3/driver"
+
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 // ServerCommand creates the server CLI command
@@ -35,11 +40,14 @@ func ServerCommand() *cli.Command {
 
 // runServer starts the HTTP server with ConnectRPC handlers
 func runServer(ctx context.Context, cmd *cli.Command) error {
-	// Open database connection
-	db, err := sql.Open("sqlite", cfg.Database.Path)
+	conn, err := (&sqlite.SQLite{}).OpenConnector(cfg.Database.Path)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
+	ldb := sqllogger.LoggingConnector(dblogger.DBLogger{
+		Logger: slog.Default(),
+	}, conn)
+	db := sql.OpenDB(ldb)
 	defer db.Close()
 
 	abs, _ := filepath.Abs(cfg.Database.Path)
@@ -107,14 +115,14 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Vite fragment: %w", err)
 	}
-	
+
 	// Create WebUI handler with logging middleware
 	webuiHandler := CreateWebuiHandler(WebUIConfig{
 		Fragment: webuiFragment,
 		DistFS:   distFS,
 		Logger:   slog.Default(),
 	})
-	
+
 	// Wrap WebUI handler with HTTP logging middleware
 	httpLoggingMiddleware := server.HTTPLoggingMiddleware(slog.Default())
 	mux.Handle("/", httpLoggingMiddleware(webuiHandler))
@@ -154,9 +162,13 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 				return
 			}
 			publicIp := outgoingAddr.LocalAddr().(*net.UDPAddr).IP.String()
-			slog.Info(fmt.Sprintf("Server outgoing address: http://%s:%d", publicIp, port))
+			slog.Info("server is listening",
+				"public", fmt.Sprintf("http://%s:%d", publicIp, port),
+				"local", fmt.Sprintf("http://%s", listener.Addr().String()),
+			)
+		} else { // unix socket
+			slog.Info("server is listening", "socket", listener.Addr().String())
 		}
-		slog.Info("Server is listening", "address", "http://"+listener.Addr().String())
 		errChan <- httpServer.Serve(listener)
 	}()
 

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -70,8 +71,9 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 
 		// Log the complete request/response cycle
 		if err == nil {
-			msg := fmt.Sprintf("Unary RPC %s completed", procedure)
-			c.logger.InfoContext(ctx, msg,
+			msg := fmt.Sprintf("RPC %s - ok - %s", procedure, duration)
+			c.logger.InfoContext(ctx, msg)
+			c.logger.DebugContext(ctx, msg,
 				slog.String("type", "unary_rpc"),
 				slog.String("procedure", procedure),
 				slog.Duration("duration", duration),
@@ -82,7 +84,11 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 				slog.String("status", "success"),
 			)
 		} else {
-			msg := fmt.Sprintf("Unary RPC %s failed", procedure)
+			code := connect.CodeInternal
+			if e := (&connect.Error{}); errors.As(err, &e) {
+				code = e.Code()
+			}
+			msg := fmt.Sprintf("RPC %s - %s - %s", procedure, code, duration)
 			c.logger.ErrorContext(ctx, msg,
 				slog.String("type", "unary_rpc"),
 				slog.String("procedure", procedure),

@@ -9,6 +9,7 @@
   } from "../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
+  import { getSourceServiceClient } from "../connectrpc";
 
   interface Props {
     /**
@@ -65,26 +66,6 @@
 
   const { onCloseRequest }: Props = $props();
 
-  async function createConnectClient() {
-    const { createClient } = await import("@connectrpc/connect");
-    const { createConnectTransport } = await import("@connectrpc/connect-web");
-    const { SourceService } = await import("../gen/claw/v1/source_service_pb");
-    const transport = createConnectTransport({
-      baseUrl: import.meta.env.BASE_URL,
-    });
-    return createClient(SourceService, transport);
-  }
-
-  type ConnectClient = Awaited<ReturnType<typeof createConnectClient>>;
-
-  let connectClient = $state<ConnectClient | undefined>();
-  async function getClient() {
-    if (!connectClient) {
-      connectClient = await createConnectClient();
-    }
-    return connectClient;
-  }
-
   async function postCreateSource() {
     if (!$addSourceForm.valid) {
       return;
@@ -97,7 +78,7 @@
       isDisabled: $isDisabled.value,
       schedules: schedules.map((s) => s.pattern),
     };
-    return getClient().then((client) => client.createSource(data));
+    return getSourceServiceClient().then((client) => client.createSource(data));
   }
 
   let serverErrorResponse = $state<Error | null>(null);
@@ -116,7 +97,9 @@
   }
   let showParameterHelp = $state(false);
   async function listSources() {
-    return getClient().then((client) => client.listAvailableSources({}));
+    return getSourceServiceClient().then((client) =>
+      client.listAvailableSources({}),
+    );
   }
 
   const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
@@ -180,12 +163,7 @@
         Source <span class="text-error">*</span>
       </span>
       {#if selectedSource?.description}
-        {#await import("../components/InfoPopoverMarkdown.svelte") then { default: InfoPopoverMarkdown }}
-          <InfoPopoverMarkdown
-            content={selectedSource.description}
-            headerText={selectedSource.displayName || selectedSource.name}
-          />
-        {/await}
+        <div></div>
       {/if}
     </legend>
     {#if $listSourcesResult.isLoading}

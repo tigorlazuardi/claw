@@ -19,6 +19,7 @@ import (
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/source"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
+	"github.com/tigorlazuardi/claw/lib/dblogger"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -111,6 +112,7 @@ func (scheduler *scheduler) getJobs(ctx context.Context) ([]model.Jobs, error) {
 		}
 		cond = AND(cond, Jobs.ID.NOT_IN(expr...))
 	}
+	ctx = dblogger.ContextWithSkipLog(ctx)
 	err := SELECT(Jobs.AllColumns).
 		FROM(Jobs).
 		WHERE(cond).
@@ -126,7 +128,7 @@ func (scheduler *scheduler) enqueueJobs(jobs []model.Jobs) {
 	for _, job := range jobs {
 		scheduler.tracker.Add(*job.ID)
 		scheduler.queue <- job
-		scheduler.logger.Debug("Enqueuing job", "job_id", job.ID, "source_id", job.SourceID, "schedule_id", job.ScheduleID)
+		scheduler.logger.Info("Enqueuing job", "job_id", job.ID, "source_id", job.SourceID, "schedule_id", job.ScheduleID)
 	}
 }
 

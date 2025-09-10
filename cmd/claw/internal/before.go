@@ -10,31 +10,48 @@ import (
 	"strings"
 
 	"github.com/adrg/xdg"
+	"github.com/golang-cz/devslog"
+	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/protobuf/proto"
 )
 
 var cwd, _ = os.Getwd()
 
+func replaceAttr(groups []string, a slog.Attr) slog.Attr {
+	if a.Value.Kind() == slog.KindDuration {
+		a.Value = slog.StringValue(a.Value.Duration().String())
+	}
+	if source, ok := a.Value.Any().(*slog.Source); ok {
+		source.File = strings.TrimPrefix(source.File, cwd+string(os.PathSeparator))
+		source.Function = strings.TrimPrefix(source.Function, "github.com/tigorlazuardi/claw/")
+	}
+	if m, ok := a.Value.Any().(proto.Message); ok {
+		a.Value = transformProtoToLog(m)
+	}
+	return a
+}
+
+var handleOption = &slog.HandlerOptions{
+	AddSource:   true,
+	Level:       slog.LevelInfo,
+	ReplaceAttr: replaceAttr,
+}
+
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
-	slog.SetDefault(slog.New(LogHandler{slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: true,
-		Level:     slog.LevelInfo,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Value.Kind() == slog.KindDuration {
-				a.Value = slog.StringValue(a.Value.Duration().String())
-			}
-			if source, ok := a.Value.Any().(*slog.Source); ok {
-				source.File = strings.TrimPrefix(source.File, cwd+string(os.PathSeparator))
-				source.Function = strings.TrimPrefix(source.Function, "github.com/tigorlazuardi/claw/")
-			}
-			if m, ok := a.Value.Any().(proto.Message); ok {
-				a.Value = transformProtoToLog(m)
-			}
-			return a
-		},
-	})}))
+	var handler slog.Handler
+	if isatty.IsTerminal(os.Stderr.Fd()) {
+		handler = devslog.NewHandler(os.Stderr, &devslog.Options{
+			HandlerOptions:    handleOption,
+			NewLineAfterLog:   true,
+			StringerFormatter: true,
+		})
+	} else {
+		handler = slog.NewJSONHandler(os.Stderr, handleOption)
+	}
+
+	slog.SetDefault(slog.New(LogHandler{handler}))
 	if cfg == nil {
 		cfg = defaultCLIConfig()
 	}
