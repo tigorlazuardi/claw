@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
+  import {
+    useMutation,
+    useQuery,
+    useQueryClient,
+  } from "@sveltestack/svelte-query";
   import { form as formValidator, field } from "svelte-forms";
   import { required } from "svelte-forms/validators";
   import type { M } from "../types";
@@ -11,6 +15,7 @@
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
   import { getSourceServiceClient } from "../connectrpc";
+  import { Popover } from "bits-ui";
 
   interface Props {
     /**
@@ -67,51 +72,54 @@
 
   const { onCloseRequest }: Props = $props();
 
-  async function postCreateSource() {
+  const createSourceMutation = useMutation((req: M<CreateSourceRequest>) =>
+    getSourceServiceClient().then((client) => client.createSource(req)),
+  );
+
+  async function handleOnSubmit() {
     if (!$addSourceForm.valid) {
       return;
     }
-    const data: M<CreateSourceRequest> = {
-      name: $name.value,
-      parameter: $parameter.value,
-      displayName: $displayName.value,
-      countback: $countback.value,
-      isDisabled: $isDisabled.value,
-      schedules: schedules.map((s) => s.pattern),
-    };
-    return getSourceServiceClient().then((client) => client.createSource(data));
-  }
-
-  let serverErrorResponse = $state<Error | null>(null);
-  let isSubmitting = $state(false);
-  async function handleOnSubmit() {
-    isSubmitting = true;
-    return postCreateSource()
-      .then(async (res) => {
-        if (!res) return;
-        const queryClient = useQueryClient();
-        queryClient.invalidateQueries(["sources", "list"]);
-        onCloseRequest();
-      })
-      .catch((err: Error) => (serverErrorResponse = err))
-      .finally(() => (isSubmitting = false));
-  }
-  let showParameterHelp = $state(false);
-  async function listSources() {
-    return getSourceServiceClient().then((client) =>
-      client.listAvailableSources({}),
+    $createSourceMutation.mutate(
+      {
+        name: $name.value,
+        parameter: $parameter.value,
+        displayName: $displayName.value,
+        countback: $countback.value,
+        isDisabled: $isDisabled.value,
+        schedules: schedules.map((s) => s.pattern),
+      },
+      {
+        onSuccess: () => {
+          useQueryClient().invalidateQueries(["sources", "list"]);
+          onCloseRequest();
+        },
+      },
     );
   }
+  let showParameterHelp = $state(false);
 
-  const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
-  let selectedSource = $derived.by(() => {
-    const sources = $listSourcesResult.data?.sources;
-    if (sources?.length === 1) {
-      $name.value = sources[0].name;
-      return sources[0];
-    }
-    return sources?.find((s) => s.name === $name.value);
-  });
+  const listAvailableSources = useQuery(
+    ["sources", "listDropdown"],
+    () =>
+      getSourceServiceClient().then((client) =>
+        client.listAvailableSources({}),
+      ),
+    {
+      onSuccess(data) {
+        if (data.sources.length === 1) {
+          if ($countback.value === 0) {
+            $countback.value = data.sources[0].defaultCountback;
+          }
+          $name.value = data.sources[0].name;
+        }
+      },
+    },
+  );
+  let selectedSource = $derived(
+    $listAvailableSources.data?.sources.find((s) => s.name === $name.value),
+  );
+
   let hasParameterHelp = $derived(
     selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
   );
@@ -144,6 +152,8 @@
       {@render selectSourceInput()}
       {#if selectedSource}
         {@render parameterInput(selectedSource)}
+        {@render displayNameInput()}
+        {@render countbackInput(selectedSource)}
       {/if}
     </form>
   </div>
@@ -172,12 +182,12 @@
         <div></div>
       {/if}
     </legend>
-    {#if $listSourcesResult.isLoading}
+    {#if $listAvailableSources.isLoading}
       {@render loadingSources()}
-    {:else if $listSourcesResult.isSuccess}
-      {@render sourcesInput($listSourcesResult.data)}
+    {:else if $listAvailableSources.isSuccess}
+      {@render sourcesInput($listAvailableSources.data)}
     {:else}
-      {@render sourcesError($listSourcesResult.error)}
+      {@render sourcesError($listAvailableSources.error)}
     {/if}
   </fieldset>
 {/snippet}
@@ -222,14 +232,37 @@
       {#if source.requireParameter}
         <span class="text-error">*</span>
       {/if}
-      {#if source.parameterHelp}
-        <button
-          class="btn btn-square btn-ghost btn-xs"
-          type="button"
-          onclick={() => (showParameterHelp = !showParameterHelp)}
-        >
-          <IconInfo />
-        </button>
+      {#if hasParameterHelp}
+        <Popover.Root onOpenChange={(v) => (showParameterHelp = v)}>
+          <Popover.Trigger
+            class="btn btn-square btn-ghost btn-xs"
+            type="button"
+          >
+            <IconInfo />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              class="z-[9999] bg-transparent"
+              data-theme="dracula"
+            >
+              <div class="card bg-base-300 border-base-200 border">
+                <div class="card-body">
+                  <div class="card-title">Parameter Help</div>
+                  <div
+                    class="p-4 border border-base-100"
+                    style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
+                  >
+                    {#if showParameterHelp}
+                      {#await import ("../components/MarkdownText.svelte") then { default: MarkdownText }}
+                        <MarkdownText text={source.parameterHelp} />
+                      {/await}
+                    {/if}
+                  </div>
+                </div>
+              </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       {/if}
     </legend>
     <textarea
@@ -244,5 +277,89 @@
     {:else}
       <span class="label">Optional</span>
     {/if}
+  </fieldset>
+{/snippet}
+
+{#snippet displayNameInput()}
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      <span>
+        Display Name <span class="text-error">*</span>
+      </span>
+    </legend>
+    <input
+      type="text"
+      class="input w-full"
+      bind:value={$displayName.value}
+      placeholder="Human readable name for the UI"
+      required
+    />
+    <p class="label">Required</p>
+  </fieldset>
+{/snippet}
+
+{#snippet countbackInput(source: AvailableSource)}
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      <span>Count Back</span>
+      <Popover.Root>
+        <Popover.Trigger class="btn btn-square btn-ghost btn-xs" type="button">
+          <IconInfo />
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content class="z-[9999] bg-transparent" data-theme="dracula">
+            <div class="card bg-base-300 border-base-200 border">
+              <div class="card-body">
+                <div class="card-title flex-col items-start">
+                  <span>Count Back</span>
+                  <span class="text-xs">
+                    Souce: {source.displayName} ({source.name})
+                  </span>
+                  <span class="text-xs">
+                    Default Value: {source.defaultCountback}
+                  </span>
+                </div>
+                <div
+                  class="prose p-4 border border-base-100"
+                  style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
+                >
+                  <p>
+                    Count Back lookup the number of "Items" to look up for and
+                    sets an upper limit for Claw to stop looking for more
+                    images.
+                  </p>
+                  <p>
+                    However, "Items" do not mean "Images". It can be something
+                    like a post or forum entry, but if it's not an image, the
+                    post will be skipped, however it still counts towards the
+                    count back limit.
+                  </p>
+                  <p>
+                    The main purpose for Count Back is to avoid API rate limit.
+                  </p>
+
+                  <p>
+                    Source Default Value usually expects for the same Source
+                    Kind to not have overlapping schedules and takes as many
+                    images possible under the API limit.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </legend>
+    <input
+      class="input w-full"
+      type="number"
+      step="1"
+      min="0"
+      bind:value={$countback.value}
+    />
+    <p class="label">
+      The number of items to look up for. If value is 0, source default will be
+      used
+    </p>
   </fieldset>
 {/snippet}

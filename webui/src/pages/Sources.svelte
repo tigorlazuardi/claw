@@ -2,17 +2,40 @@
   import { useQuery } from "@sveltestack/svelte-query";
   import LoadingModal from "../components/LoadingModal.svelte";
   import { getSourceServiceClient } from "../connectrpc";
-  import type { ListSourcesResponse } from "../gen/claw/v1/source_service_pb";
+  import type {
+    ListSourcesRequest,
+    ListSourcesResponse,
+  } from "../gen/claw/v1/source_service_pb";
   import type { Source } from "../gen/claw/v1/source_pb";
   import IconImport from "@lucide/svelte/icons/import";
-  import { ImportIcon } from "@lucide/svelte";
+
+  import { toQuery, fromQuery } from "query-string-parser";
+  import type { M } from "../types";
 
   let showAddModal = $state(false);
 
-  const listSources = useQuery(["sources", "list"], async () => {
-    const client = await getSourceServiceClient();
-    return client.listSources({});
+  type QueryState = Partial<M<ListSourcesRequest>>;
+
+  let queryState: QueryState = $state(fromQuery(location.search) || {});
+
+  $effect(() => {
+    let qs = toQuery(queryState);
+    if (qs !== "") {
+      qs = `?${qs}`;
+    }
+    history.replaceState(null, "", location.pathname + qs);
   });
+
+  const listSources = useQuery(
+    ["sources", "list", queryState],
+    async () => {
+      const client = await getSourceServiceClient();
+      return client.listSources(queryState);
+    },
+    {
+      keepPreviousData: true,
+    },
+  );
 </script>
 
 <div class="p-[2rem] 2xl:max-w-[60vw] max-w-full m-auto">
@@ -68,7 +91,7 @@
 {#snippet emptyState()}
   <div class="flex flex-col items-center justify-center py-16 text-center">
     <div class="mb-6">
-      <ImportIcon class="mx-auto w-[6rem] h-[6rem] text-base-content" />
+      <IconImport class="mx-auto w-[6rem] h-[6rem] text-base-content" />
       <h3 class="text-xl font-semibold text-base-content mb-2">
         No Sources Have Been Added
       </h3>
