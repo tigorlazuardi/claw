@@ -135,7 +135,7 @@ func (scheduler *scheduler) enqueueJobs(jobs []model.Jobs) {
 
 func (scheduler *scheduler) consumeJobQueue(ctx context.Context) {
 	sem := semaphore.NewWeighted(leastCommonMultiple)
-	workers := min(scheduler.config.Scheduler.MaxWorkers, 16) // Max 16 workers
+	workers := Clamp(scheduler.config.Scheduler.MaxWorkers, 1, 16) // Max 16 workers, min 1 worker
 	weight := int64(leastCommonMultiple / workers)
 	reload := scheduler.reloadSignal.Listener(1)
 	for {
@@ -144,7 +144,7 @@ func (scheduler *scheduler) consumeJobQueue(ctx context.Context) {
 			scheduler.logger.DebugContext(ctx, "scheduler queue consumer stopped")
 			return
 		case <-reload.Ch():
-			workers = min(scheduler.config.Scheduler.MaxWorkers, 16)
+			workers = Clamp(scheduler.config.Scheduler.MaxWorkers, 1, 16)
 			weight = int64(leastCommonMultiple / workers)
 			scheduler.logger.InfoContext(ctx, "reloading max workers", "new_max_workers", workers)
 		case job := <-scheduler.queue:
