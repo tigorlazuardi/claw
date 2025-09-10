@@ -6,6 +6,7 @@
   import type {
     AvailableSource,
     CreateSourceRequest,
+    ListAvailableSourcesResponse,
   } from "../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
@@ -103,9 +104,14 @@
   }
 
   const listSourcesResult = useQuery(["sources", "listDropdown"], listSources);
-  let selectedSource = $derived(
-    $listSourcesResult.data?.sources?.find((s) => s.name === $name.value),
-  );
+  let selectedSource = $derived.by(() => {
+    const sources = $listSourcesResult.data?.sources;
+    if (sources?.length === 1) {
+      $name.value = sources[0].name;
+      return sources[0];
+    }
+    return sources?.find((s) => s.name === $name.value);
+  });
   let hasParameterHelp = $derived(
     selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
   );
@@ -167,39 +173,46 @@
       {/if}
     </legend>
     {#if $listSourcesResult.isLoading}
-      <select class="select">
-        <option
-          disabled
-          selected
-          value=""
-          class="loading loading-spinner"
-        ></option>
-      </select>
-      <span class="label">Getting list of sources. Please wait...</span>
+      {@render loadingSources()}
     {:else if $listSourcesResult.isSuccess}
-      {@const sources = $listSourcesResult.data.sources}
-      <select class="select w-full" bind:value={$name.value} required>
-        {#if !selectedSource}
-          <option disabled value="" class="text-base-100">
-            -- select a source --
-          </option>
-        {/if}
-        {#each sources as source (source.name)}
-          <option value={source.name}>
-            {source.displayName} ({source.name})
-          </option>
-        {/each}
-      </select>
-      <span class="label">Choose supported source</span>
+      {@render sourcesInput($listSourcesResult.data)}
     {:else}
-      <select class="select">
-        <option disabled selected value="">-- error loading sources --</option>
-      </select>
-      <span class="label text-error">
-        Error loading sources: {$listSourcesResult.error}
-      </span>
+      {@render sourcesError($listSourcesResult.error)}
     {/if}
   </fieldset>
+{/snippet}
+
+{#snippet loadingSources()}
+  <select class="select">
+    <option disabled selected value="" class="loading loading-spinner"></option>
+  </select>
+  <span class="label">Getting list of sources. Please wait...</span>
+{/snippet}
+
+{#snippet sourcesInput(data: ListAvailableSourcesResponse)}
+  {@const sources = data.sources}
+  <select class="select w-full" bind:value={$name.value} required>
+    {#if !selectedSource}
+      <option disabled value="" class="text-base-100">
+        -- select a source --
+      </option>
+    {/if}
+    {#each sources as source (source.name)}
+      <option value={source.name}>
+        {source.displayName} ({source.name})
+      </option>
+    {/each}
+  </select>
+  <span class="label">Choose supported source</span>
+{/snippet}
+
+{#snippet sourcesError(err: any)}
+  <select class="select">
+    <option disabled selected value="">-- error loading sources --</option>
+  </select>
+  <span class="label text-error">
+    Error loading sources: {err}
+  </span>
 {/snippet}
 
 {#snippet parameterInput(source: AvailableSource)}
