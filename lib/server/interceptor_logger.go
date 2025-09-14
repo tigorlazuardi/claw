@@ -40,6 +40,7 @@ type loggerInterceptor struct {
 // WrapUnary implements logging for unary RPC calls
 func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		ctx = withEndpointInfo(ctx)
 		start := time.Now()
 		procedure := req.Spec().Procedure
 
@@ -71,24 +72,32 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 
 		// Log the complete request/response cycle
 		if err == nil {
-			msg := fmt.Sprintf("RPC %s - ok - %s", procedure, duration)
-			c.logger.InfoContext(ctx, msg)
-			c.logger.DebugContext(ctx, msg,
-				slog.String("type", "unary_rpc"),
-				slog.String("procedure", procedure),
-				slog.Duration("duration", duration),
-				slog.Any("request_headers", headers),
-				slog.Any("request_body", reqBody),
-				slog.Any("response_headers", responseHeaders),
-				slog.Any("response_body", respBody),
-				slog.String("status", "success"),
-			)
+			handler := c.logger.Handler()
+			if !handler.Enabled(ctx, slog.LevelInfo) {
+				return resp, err
+			}
+			msg := fmt.Sprintf("RPC %s %s", procedure, duration)
+			record := slog.NewRecord(time.Now(), slog.LevelInfo, msg, getEnpointInfoPC(ctx))
+			handler.Handle(ctx, record)
+			if handler.Enabled(ctx, slog.LevelDebug) {
+				record.AddAttrs(
+					slog.String("type", "unary_rpc"),
+					slog.String("procedure", procedure),
+					slog.Duration("duration", duration),
+					slog.Any("request_headers", headers),
+					slog.Any("request_body", reqBody),
+					slog.Any("response_headers", responseHeaders),
+					slog.Any("response_body", respBody),
+					slog.String("status", "success"),
+				)
+				handler.Handle(ctx, record)
+			}
 		} else {
 			code := connect.CodeInternal
 			if e := (&connect.Error{}); errors.As(err, &e) {
 				code = e.Code()
 			}
-			msg := fmt.Sprintf("RPC %s - %s - %s", procedure, code, duration)
+			msg := fmt.Sprintf("RPC %s %s %s", procedure, code, duration)
 			c.logger.ErrorContext(ctx, msg,
 				slog.String("type", "unary_rpc"),
 				slog.String("procedure", procedure),

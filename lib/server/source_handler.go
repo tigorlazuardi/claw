@@ -23,6 +23,7 @@ func NewSourceHandler(service *claw.Claw) *SourceHandler {
 
 // CreateSource handles source creation requests
 func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[clawv1.CreateSourceRequest]) (*connect.Response[clawv1.CreateSourceResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.CreateSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -32,6 +33,7 @@ func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[c
 
 // GetSource handles source retrieval requests
 func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[clawv1.GetSourceRequest]) (*connect.Response[clawv1.GetSourceResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.GetSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -41,6 +43,7 @@ func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[claw
 
 // UpdateSource handles source update requests
 func (h *SourceHandler) UpdateSource(ctx context.Context, req *connect.Request[clawv1.UpdateSourceRequest]) (*connect.Response[clawv1.UpdateSourceResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.UpdateSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -50,6 +53,7 @@ func (h *SourceHandler) UpdateSource(ctx context.Context, req *connect.Request[c
 
 // DeleteSource handles source deletion requests
 func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[clawv1.DeleteSourceRequest]) (*connect.Response[clawv1.DeleteSourceResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.DeleteSource(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -59,6 +63,7 @@ func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[c
 
 // ListSources handles source listing requests
 func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[clawv1.ListSourcesRequest]) (*connect.Response[clawv1.ListSourcesResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.ListSources(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -68,6 +73,7 @@ func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[cl
 
 // ListAvailableSources handles listing available source types
 func (h *SourceHandler) ListAvailableSources(ctx context.Context, req *connect.Request[clawv1.ListAvailableSourcesRequest]) (*connect.Response[clawv1.ListAvailableSourcesResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.ListAvailableSources(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -77,6 +83,7 @@ func (h *SourceHandler) ListAvailableSources(ctx context.Context, req *connect.R
 
 // GetCronNextTime handles cron expression next time calculation
 func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Request[clawv1.GetCronNextTimeRequest]) (*connect.Response[clawv1.GetCronNextTimeResponse], error) {
+	registerEndpointInfo(ctx)
 	gron := gronx.New()
 
 	// Validate the cron expression
@@ -99,6 +106,7 @@ func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Reques
 
 // ValidateSourceParameters handles source parameter validation requests
 func (h *SourceHandler) ValidateSourceParameters(ctx context.Context, req *connect.Request[clawv1.ValidateSourceParametersRequest]) (*connect.Response[clawv1.ValidateSourceParametersResponse], error) {
+	registerEndpointInfo(ctx)
 	resp, err := h.service.ValidateSourceParameters(ctx, req.Msg)
 	if err != nil {
 		return nil, err
