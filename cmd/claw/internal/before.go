@@ -40,7 +40,9 @@ var handleOption = &slog.HandlerOptions{
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
 	if prettylog.CanColor(os.Stderr) {
-		prettyHandler := prettylog.New()
+		prettyHandler := prettylog.New(
+			prettylog.WithPackageName("github.com/tigorlazuardi/claw"),
+		)
 		slog.SetDefault(slog.New(prettyHandler))
 	} else {
 		logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{

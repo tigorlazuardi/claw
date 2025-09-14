@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/teivah/broadcast v0.1.0
 	github.com/tidwall/pretty v1.2.1
-	github.com/tigorlazuardi/prettylog v0.1.0
+	github.com/tigorlazuardi/prettylog v0.1.7
 	github.com/urfave/cli/v3 v3.4.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.13.0
 	go.opentelemetry.io/otel v1.38.0
