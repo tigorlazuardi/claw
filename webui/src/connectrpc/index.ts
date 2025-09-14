@@ -9,10 +9,15 @@ async function createSourceServiceClient() {
   const transport = createConnectTransport({
     baseUrl: import.meta.env.BASE_URL,
     fetch(input, init) {
-      return fetch(input, {
+      const cancelToken = new AbortController().signal;
+      const promise = fetch(input, {
         ...init,
         credentials: "include",
+        signal: cancelToken,
       });
+      //@ts-ignore svelte query will use the cancel method if it exists to cancel requests.
+      promise.cancel = () => cancelToken.abort();
+      return promise;
     },
   });
   return createClient(SourceService, transport);

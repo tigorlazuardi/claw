@@ -30,40 +30,27 @@
     onCloseRequest: () => void;
   }
 
-  const validateParameterMutation = useMutation(
-    (req: M<ValidateSourceParametersRequest>) =>
-      getSourceServiceClient().then((client) =>
-        client.validateSourceParameters(req),
-      ),
-    {
-      onSuccess(data) {
-        if (data.transformedParameter) {
-          $parameter.value = data.transformedParameter;
-        }
-      },
-    },
-  );
-
   const name = field("name", "", [required()]);
   const parameter = field("parameter", "", [
-    async function (val: string) {
-      if (val.trim() === "") {
-        return {
-          valid: !!selectedSource?.requireParameter,
-          name: "parameter_value",
-        };
-      }
-      try {
-        await $validateParameterMutation.mutateAsync({
-          sourceName: $name.value,
-          parameter: val,
-        });
-        return { valid: true, name: "parameter_value" };
-      } catch {
-        return { valid: false, name: "parameter_value" };
-      }
+    function (val: string) {
+      return {
+        valid: !!val.trim() === !!selectedSource?.requireParameter,
+        name: "parameter_required",
+      };
     },
   ]);
+
+  const validateParameterQueryRequest: M<ValidateSourceParametersRequest> =
+    $derived({
+      sourceName: $name.value,
+      parameter: $parameter.value,
+    });
+  const validateParameterQuery = useQuery(["source", "validateParameter"], () =>
+    getSourceServiceClient().then((client) =>
+      client.validateSourceParameters(validateParameterQueryRequest),
+    ),
+  );
+
   const displayName = field("display_name", "", [required()]);
   const countback = field("countback", 0);
   const isDisabled = field("is_disabled", false);
@@ -108,16 +95,6 @@
   const createSourceMutation = useMutation((req: M<CreateSourceRequest>) =>
     getSourceServiceClient().then((client) => client.createSource(req)),
   );
-
-  function validatePareameter() {
-    if (!selectedSource) return;
-    if (!$parameter.valid) return;
-    if (!$parameter.value) return;
-    $validateParameterMutation.mutate({
-      sourceName: $name.value,
-      parameter: $parameter.value,
-    });
-  }
 
   function handleOnSubmit() {
     if (!$addSourceForm.valid) {
@@ -313,9 +290,20 @@
       placeholder={source.parameterPlaceholder ||
         "Configuration parameters (JSON, comma-separated values, etc.)"}
       bind:value={$parameter.value}
+      onblur={() => {
+        if ($parameter.value.trim() === "") return;
+        $validateParameterMutation.mutate({
+          sourceName: source.name,
+          parameter: $parameter.value,
+        });
+      }}
       required={source.requireParameter}
     ></textarea>
-    {#if source.requireParameter}
+    {#if $parameter.errors.length > 0}
+      {#each $parameter.errors as err}
+        <span class="label text-error">{err}</span>
+      {/each}
+    {:else if source.requireParameter}
       <span class="label">Required</span>
     {:else}
       <span class="label">Optional</span>
