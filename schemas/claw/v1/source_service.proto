@@ -42,6 +42,9 @@ service SourceService {
 
   // Get the next run time for a cron expression. The time is adjusted to the server's time zone.
   rpc GetCronNextTime(GetCronNextTimeRequest) returns (GetCronNextTimeResponse);
+
+  // Validate source parameters using the backend ValidateTransformParameter method
+  rpc ValidateSourceParameters(ValidateSourceParametersRequest) returns (ValidateSourceParametersResponse);
 }
 
 // Create source request
@@ -226,4 +229,19 @@ message GetCronNextTimeResponse {
   // Next scheduled time based on the cron expression adjusted to
   // server's time zone.
   google.protobuf.Timestamp next_time = 1;
+}
+
+// Validate source parameters request
+message ValidateSourceParametersRequest {
+  // Name of the source to validate against
+  string source_name = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Parameters to validate
+  string parameter = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// Validate source parameters response
+message ValidateSourceParametersResponse {
+  // Transformed/normalized parameter (if valid)
+  string transformed_parameter = 1;
 }

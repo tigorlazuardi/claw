@@ -10,8 +10,7 @@ import (
 	"strings"
 
 	"github.com/adrg/xdg"
-	"github.com/golang-cz/devslog"
-	"github.com/mattn/go-isatty"
+	"github.com/tigorlazuardi/prettylog"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/protobuf/proto"
 )
@@ -40,18 +39,18 @@ var handleOption = &slog.HandlerOptions{
 
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
-	var handler slog.Handler
-	if isatty.IsTerminal(os.Stderr.Fd()) {
-		handler = devslog.NewHandler(os.Stderr, &devslog.Options{
-			HandlerOptions:    handleOption,
-			NewLineAfterLog:   true,
-			StringerFormatter: true,
-		})
+	if prettylog.CanColor(os.Stderr) {
+		prettyHandler := prettylog.New()
+		slog.SetDefault(slog.New(prettyHandler))
 	} else {
-		handler = slog.NewJSONHandler(os.Stderr, handleOption)
+		logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+			AddSource:   true,
+			Level:       slog.LevelInfo,
+			ReplaceAttr: replaceAttr,
+		}))
+		slog.SetDefault(logger)
 	}
 
-	slog.SetDefault(slog.New(LogHandler{handler}))
 	if cfg == nil {
 		cfg = defaultCLIConfig()
 	}

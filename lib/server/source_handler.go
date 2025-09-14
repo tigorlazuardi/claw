@@ -97,5 +97,14 @@ func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(resp), nil
 }
 
+// ValidateSourceParameters handles source parameter validation requests
+func (h *SourceHandler) ValidateSourceParameters(ctx context.Context, req *connect.Request[clawv1.ValidateSourceParametersRequest]) (*connect.Response[clawv1.ValidateSourceParametersResponse], error) {
+	resp, err := h.service.ValidateSourceParameters(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Ensure SourceHandler implements the SourceServiceHandler interface
 var _ clawv1connect.SourceServiceHandler = (*SourceHandler)(nil)

@@ -11,6 +11,7 @@
     AvailableSource,
     CreateSourceRequest,
     ListAvailableSourcesResponse,
+    ValidateSourceParametersRequest,
   } from "../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
@@ -29,8 +30,40 @@
     onCloseRequest: () => void;
   }
 
+  const validateParameterMutation = useMutation(
+    (req: M<ValidateSourceParametersRequest>) =>
+      getSourceServiceClient().then((client) =>
+        client.validateSourceParameters(req),
+      ),
+    {
+      onSuccess(data) {
+        if (data.transformedParameter) {
+          $parameter.value = data.transformedParameter;
+        }
+      },
+    },
+  );
+
   const name = field("name", "", [required()]);
-  const parameter = field("parameter", "");
+  const parameter = field("parameter", "", [
+    async function (val: string) {
+      if (val.trim() === "") {
+        return {
+          valid: !!selectedSource?.requireParameter,
+          name: "parameter_value",
+        };
+      }
+      try {
+        await $validateParameterMutation.mutateAsync({
+          sourceName: $name.value,
+          parameter: val,
+        });
+        return { valid: true, name: "parameter_value" };
+      } catch {
+        return { valid: false, name: "parameter_value" };
+      }
+    },
+  ]);
   const displayName = field("display_name", "", [required()]);
   const countback = field("countback", 0);
   const isDisabled = field("is_disabled", false);
@@ -76,7 +109,17 @@
     getSourceServiceClient().then((client) => client.createSource(req)),
   );
 
-  async function handleOnSubmit() {
+  function validatePareameter() {
+    if (!selectedSource) return;
+    if (!$parameter.valid) return;
+    if (!$parameter.value) return;
+    $validateParameterMutation.mutate({
+      sourceName: $name.value,
+      parameter: $parameter.value,
+    });
+  }
+
+  function handleOnSubmit() {
     if (!$addSourceForm.valid) {
       return;
     }
@@ -100,7 +143,7 @@
   let showParameterHelp = $state(false);
 
   const listAvailableSources = useQuery(
-    ["sources", "listDropdown"],
+    ["sources", "add", "listDropDown"],
     () =>
       getSourceServiceClient().then((client) =>
         client.listAvailableSources({}),
