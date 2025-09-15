@@ -4,19 +4,17 @@
     useQuery,
     useQueryClient,
   } from "@sveltestack/svelte-query";
-  import { form as formValidator, field } from "svelte-forms";
-  import { required } from "svelte-forms/validators";
-  import type { M } from "../types";
+  import type { M } from "../../types";
   import type {
     AvailableSource,
     CreateSourceRequest,
-    ListAvailableSourcesResponse,
     ValidateSourceParametersRequest,
-  } from "../gen/claw/v1/source_service_pb";
+  } from "../../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
   import IconInfo from "@lucide/svelte/icons/info";
-  import { getSourceServiceClient } from "../connectrpc";
+  import { getSourceServiceClient } from "../../connectrpc";
   import { Popover } from "bits-ui";
+  import SelectSource from "./SelectSource.svelte";
 
   interface Props {
     /**
@@ -30,65 +28,65 @@
     onCloseRequest: () => void;
   }
 
-  const name = field("name", "", [required()]);
-  const parameter = field("parameter", "", [
-    function (val: string) {
-      return {
-        valid: !!val.trim() === !!selectedSource?.requireParameter,
-        name: "parameter_required",
-      };
-    },
-  ]);
-
-  const validateParameterQueryRequest: M<ValidateSourceParametersRequest> =
-    $derived({
-      sourceName: $name.value,
-      parameter: $parameter.value,
-    });
-  const validateParameterQuery = useQuery(["source", "validateParameter"], () =>
-    getSourceServiceClient().then((client) =>
-      client.validateSourceParameters(validateParameterQueryRequest),
-    ),
-  );
-
-  const displayName = field("display_name", "", [required()]);
-  const countback = field("countback", 0);
-  const isDisabled = field("is_disabled", false);
-  const runOnCreation = field("run_on_creation", false);
-
-  let scheduleExpressionError = $state<string | undefined>();
-  const scheduleInput = field("schedule", "", [
-    async (val: string) => {
-      if (val.trim() === "") {
-        scheduleExpressionError = undefined;
-        return { valid: true, name: "cron_format" };
-      }
-      const { CronExpressionParser } = await import("cron-parser");
-      try {
-        CronExpressionParser.parse(val);
-        scheduleExpressionError = undefined;
-        return { valid: true, name: "cron_format" };
-      } catch (e) {
-        scheduleExpressionError =
-          "invalid cron expression: " + (e as Error).message;
-        return { valid: false, name: "cron_format" };
-      }
-    },
-  ]);
   type Schedule = {
     pattern: string;
     nextRun?: Date;
   };
   const schedules = $state<Schedule[]>([]);
-  const addSourceForm = formValidator(
-    name,
-    parameter,
-    displayName,
-    countback,
-    isDisabled,
-    scheduleInput,
-    runOnCreation,
+  const schedulePatterns = $derived(schedules.map((s) => s.pattern));
+
+  let addSourceRequest = $state<Omit<M<CreateSourceRequest>, "schedules">>({
+    name: "",
+    parameter: "",
+    displayName: "",
+    countback: 0,
+    isDisabled: false,
+  });
+
+  let selectedSource: AvailableSource | undefined = $state();
+  let nameValid: boolean = $state(false);
+
+  let canSubmitForm = $derived.by(() => {
+    return [
+      nameValid,
+      addSourceRequest.name,
+      selectedSource?.requireParameter && addSourceRequest.parameter,
+      addSourceRequest.displayName,
+    ].every((f) => f);
+  });
+
+  let parameterInputField: HTMLTextAreaElement | undefined = $state();
+  let validateParameterRequest = $derived<M<ValidateSourceParametersRequest>>({
+    sourceName: addSourceRequest.name,
+    parameter: addSourceRequest.parameter,
+  });
+
+  const validateParameterQuery = useQuery(
+    ["source", "add", "validateParameter"],
+    () =>
+      getSourceServiceClient().then((client) =>
+        client.validateSourceParameters(validateParameterRequest),
+      ),
+    {
+      onSuccess(data) {
+        parameterInputField?.setCustomValidity("");
+        if (data.transformedParameter) {
+          addSourceRequest.parameter = data.transformedParameter;
+        }
+      },
+      onError(err: Error) {
+        parameterInputField?.setCustomValidity(err.message);
+      },
+      enabled: false, // Only run on demand
+    },
   );
+
+  function handleValidateParamaterOnBlur() {
+    if (addSourceRequest.name && addSourceRequest.parameter) {
+      useQueryClient().cancelQueries(["source", "add", "validateParameter"]);
+      $validateParameterQuery.refetch();
+    }
+  }
 
   const { onCloseRequest }: Props = $props();
 
@@ -97,17 +95,13 @@
   );
 
   function handleOnSubmit() {
-    if (!$addSourceForm.valid) {
+    if (!canSubmitForm) {
       return;
     }
     $createSourceMutation.mutate(
       {
-        name: $name.value,
-        parameter: $parameter.value,
-        displayName: $displayName.value,
-        countback: $countback.value,
-        isDisabled: $isDisabled.value,
-        schedules: schedules.map((s) => s.pattern),
+        ...addSourceRequest,
+        schedules: schedulePatterns,
       },
       {
         onSuccess: () => {
@@ -119,43 +113,13 @@
   }
   let showParameterHelp = $state(false);
 
-  const listAvailableSources = useQuery(
-    ["sources", "add", "listDropDown"],
-    () =>
-      getSourceServiceClient().then((client) =>
-        client.listAvailableSources({}),
-      ),
-    {
-      onSuccess(data) {
-        if (data.sources.length === 1) {
-          if ($countback.value === 0) {
-            $countback.value = data.sources[0].defaultCountback;
-          }
-          $name.value = data.sources[0].name;
-        }
-      },
-    },
-  );
-  let selectedSource = $derived(
-    $listAvailableSources.data?.sources.find((s) => s.name === $name.value),
-  );
-
   let hasParameterHelp = $derived(
     selectedSource?.parameterHelp && selectedSource.parameterHelp.trim() !== "",
   );
 
-  async function addSchedule() {
-    await scheduleInput.validate();
-    if ($addSourceForm.hasError("schedule.cron_format")) return;
-    const { CronExpressionParser } = await import("cron-parser");
-    schedules.push({
-      pattern: $scheduleInput.value,
-      nextRun: $scheduleInput.value
-        ? CronExpressionParser.parse($scheduleInput.value).next().toDate()
-        : undefined,
-    });
-    scheduleInput.reset();
-  }
+  let scheduleInput: HTMLInputElement | undefined = $state();
+
+  async function addSchedule() {}
 </script>
 
 <div class="modal modal-open">
@@ -169,11 +133,16 @@
         handleOnSubmit();
       }}
     >
-      {@render selectSourceInput()}
+      <SelectSource
+        bind:selected={selectedSource}
+        bind:valid={nameValid}
+        bind:value={addSourceRequest.name}
+      />
       {#if selectedSource}
         {@render parameterInput(selectedSource)}
         {@render displayNameInput()}
         {@render countbackInput(selectedSource)}
+        {@render scheduleInputField()}
       {/if}
     </form>
   </div>
@@ -190,59 +159,6 @@
       <IconX />
     </button>
   </div>
-{/snippet}
-
-{#snippet selectSourceInput()}
-  <fieldset class="fieldset">
-    <legend class="fieldset-legend">
-      <span>
-        Source <span class="text-error">*</span>
-      </span>
-      {#if selectedSource?.description}
-        <div></div>
-      {/if}
-    </legend>
-    {#if $listAvailableSources.isLoading}
-      {@render loadingSources()}
-    {:else if $listAvailableSources.isSuccess}
-      {@render sourcesInput($listAvailableSources.data)}
-    {:else}
-      {@render sourcesError($listAvailableSources.error)}
-    {/if}
-  </fieldset>
-{/snippet}
-
-{#snippet loadingSources()}
-  <select class="select">
-    <option disabled selected value="" class="loading loading-spinner"></option>
-  </select>
-  <span class="label">Getting list of sources. Please wait...</span>
-{/snippet}
-
-{#snippet sourcesInput(data: ListAvailableSourcesResponse)}
-  {@const sources = data.sources}
-  <select class="select w-full" bind:value={$name.value} required>
-    {#if !selectedSource}
-      <option disabled value="" class="text-base-100">
-        -- select a source --
-      </option>
-    {/if}
-    {#each sources as source (source.name)}
-      <option value={source.name}>
-        {source.displayName} ({source.name})
-      </option>
-    {/each}
-  </select>
-  <span class="label">Choose supported source</span>
-{/snippet}
-
-{#snippet sourcesError(err: any)}
-  <select class="select">
-    <option disabled selected value="">-- error loading sources --</option>
-  </select>
-  <span class="label text-error">
-    Error loading sources: {err}
-  </span>
 {/snippet}
 
 {#snippet parameterInput(source: AvailableSource)}
@@ -273,7 +189,7 @@
                     style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
                   >
                     {#if showParameterHelp}
-                      {#await import ("../components/MarkdownText.svelte") then { default: MarkdownText }}
+                      {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
                         <MarkdownText text={source.parameterHelp} />
                       {/await}
                     {/if}
@@ -289,20 +205,18 @@
       class="textarea h-[3rem] w-full"
       placeholder={source.parameterPlaceholder ||
         "Configuration parameters (JSON, comma-separated values, etc.)"}
-      bind:value={$parameter.value}
-      onblur={() => {
-        if ($parameter.value.trim() === "") return;
-        $validateParameterMutation.mutate({
-          sourceName: source.name,
-          parameter: $parameter.value,
-        });
-      }}
+      bind:this={parameterInputField}
+      bind:value={addSourceRequest.parameter}
+      onblur={handleValidateParamaterOnBlur}
+      disabled={$validateParameterQuery.isFetching}
       required={source.requireParameter}
     ></textarea>
-    {#if $parameter.errors.length > 0}
-      {#each $parameter.errors as err}
-        <span class="label text-error">{err}</span>
-      {/each}
+    {#if parameterInputField?.validity.customError}
+      <span class="label text-error">
+        {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
+          <MarkdownText text={parameterInputField?.validationMessage || ""} />
+        {/await}
+      </span>
     {:else if source.requireParameter}
       <span class="label">Required</span>
     {:else}
@@ -321,7 +235,7 @@
     <input
       type="text"
       class="input w-full"
-      bind:value={$displayName.value}
+      bind:value={addSourceRequest.displayName}
       placeholder="Human readable name for the UI"
       required
     />
@@ -386,11 +300,27 @@
       type="number"
       step="1"
       min="0"
-      bind:value={$countback.value}
+      bind:value={addSourceRequest.countback}
     />
     <p class="label">
       The number of items to look up for. If value is 0, source default will be
       used
     </p>
+  </fieldset>
+{/snippet}
+
+{#snippet scheduleInputField()}
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      <span>Schedules</span>
+    </legend>
+    <input
+      type="text"
+      class="input w-full"
+      bind:value={addSourceRequest.displayName}
+      placeholder="Schedule pattern"
+      required
+    />
+    <p class="label"></p>
   </fieldset>
 {/snippet}
