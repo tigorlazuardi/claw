@@ -54,11 +54,16 @@
       },
     },
   );
+  const allOk = $derived(valid && !!selected);
 </script>
 
 <fieldset class="fieldset">
   <legend class="fieldset-legend">
-    <span>
+    <span
+      class={{
+        "text-success": allOk,
+      }}
+    >
       Source <span class="text-error">*</span>
     </span>
     {#if selected?.description}
@@ -75,7 +80,7 @@
 </fieldset>
 
 {#snippet loadingSources()}
-  <select class="select">
+  <select class="select w-full">
     <option disabled selected value="" class="loading loading-spinner"></option>
   </select>
   <span class="label">Getting list of sources. Please wait...</span>
@@ -91,7 +96,11 @@
       );
     }}
     bind:value
-    class="select w-full"
+    class={{
+      "select w-full": true,
+      "select-success": allOk,
+      "text-success": allOk,
+    }}
     required
   >
     {#if !selected}
@@ -100,12 +109,19 @@
       </option>
     {/if}
     {#each sources as source (source.name)}
-      <option value={source.name}>
+      <option class="text-base-content" value={source.name}>
         {source.displayName} ({source.name})
       </option>
     {/each}
   </select>
-  <span class="label">Choose supported source</span>
+  <span
+    class={{
+      label: true,
+      "text-success": allOk,
+    }}
+  >
+    Choose supported source
+  </span>
 {/snippet}
 
 {#snippet sourcesError(err: any)}

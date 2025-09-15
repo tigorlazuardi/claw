@@ -8,6 +8,7 @@
   import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
   import { getSourceServiceClient } from "../../connectrpc";
   import type { M } from "../../types";
+  import IconCheck from "@lucide/svelte/icons/check";
 
   const queryClient = useQueryClient();
 
@@ -72,11 +73,15 @@
     queryClient.cancelQueries(["source", "add", "validateParameter"]);
     $validateParameterQuery.refetch();
   }
+
+  const allOk = $derived(
+    valid && (!source.requireParameter || value.trim().length > 0),
+  );
 </script>
 
 <fieldset class="fieldset">
   <legend class="fieldset-legend">
-    <span>Parameters</span>
+    <span class={{ "text-success": allOk }}>Parameters</span>
     {#if source.requireParameter}
       <span class="text-error">*</span>
     {/if}
@@ -108,7 +113,11 @@
     {/if}
   </legend>
   <textarea
-    class="textarea h-[3rem] w-full"
+    class={{
+      "textarea h-[3rem] w-full": true,
+      "textarea-success": allOk,
+      "text-success": allOk,
+    }}
     placeholder={source.parameterPlaceholder ||
       "Configuration parameters (JSON, comma-separated values, etc.)"}
     bind:this={parameterInputField}
@@ -123,7 +132,10 @@
     required={source.requireParameter}
   ></textarea>
   {#if $validateParameterQuery.isFetching}
-    <div class="alert alert-warning alert-soft">Validating...</div>
+    <div class="alert alert-warning alert-soft">
+      <div class="loading loading-spinner"></div>
+      <span>Validating...</span>
+    </div>
   {:else if parameterInputField?.validity.customError}
     {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
       <div role="alert" class="alert alert-error alert-soft">
@@ -131,7 +143,10 @@
       </div>
     {/await}
   {:else if valid && source.requireParameter}
-    <div class="alert alert-success alert-soft">Looks good!</div>
+    <div class="alert alert-success alert-soft">
+      <IconCheck />
+      <span>Looks good!</span>
+    </div>
   {:else if source.requireParameter}
     <span class="label">Required</span>
   {:else}
