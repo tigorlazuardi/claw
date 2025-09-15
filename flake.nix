@@ -63,10 +63,11 @@
 
               (writeShellScriptBin "dev" ''
                 systemd-run --user --scope --unit=claw-dev ${writeShellScript "dev" ''
-                  foot wgo -file=.go clear :: go run ./cmd/claw/main.go server &
                   foot wgo -file =.sql clear :: go run ./cmd/goose/main.go --reset :: go run ./cmd/go-jet/main.go &
                   foot --working-directory=$(pwd)/webui npm run dev &
                   foot --working-directory=$(pwd)/schemas wgo -file=.proto -file=buf.gen.yaml -file=buf.yaml clear :: buf generate :: echo "Protobuf generated. Watching for changes..." &
+                  sleep 0.2
+                  foot wgo -file=.go clear :: go run ./cmd/claw/main.go server &
                 ''}
               '')
               (writeShellScriptBin "stop" ''
