@@ -100,16 +100,14 @@ func (re Reddit) DefaultCountback() int {
 }
 
 const helpString = /*markdown*/
-`This source fetches images from a Reddit user or subreddit.
-
-Supported parameter formats:
+`Supported parameter formats for claw.reddit.v1:
 
 - Full URL to a subreddit, e.g. https://reddit.com/r/wallpapers
-- Also accept shorthand expression: r/wallpapers.
-- u/{user}
-- r/{subreddit}
-- user/{user} (will be normalized to u/{user})
-- user/{user}.json (will be normalized to u/{user})
+- Also accept shorthand expression: /r/wallpapers.
+- /u/{user}
+- /r/{subreddit}
+- /user/{user} (will be normalized to /u/{user})
+- /user/{user}.json (will be normalized to /u/{user})
 `
 
 // ParameterHelp returns the help string for the parameter.
@@ -122,7 +120,7 @@ func (re *Reddit) ParameterHelp() string {
 //
 // This is usually a very short string to show as a hint for the user.
 func (re *Reddit) ParameterPlaceholder() string {
-	return `Subreddit name or username, e.g. r/wallpapers or u/spez`
+	return `Subreddit name or username, e.g. /r/wallpapers or /u/spez`
 }
 
 // Name returns the unique kind identifier for the source.
@@ -168,8 +166,8 @@ func (re *Reddit) AuthorURL() string {
 
 // Define regex patterns for validation
 var (
-	userPattern      = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com/)?(u|user)/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
-	subredditPattern = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com/)?r/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
+	userPattern      = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com)?/(u|user)/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
+	subredditPattern = regexp.MustCompile(`^(?:https?://(?:www\.)?reddit\.com)?/r/([a-zA-Z0-9_-]+)(?:\.json)?/?$`)
 )
 
 // ValidateTransformParameter validates the parameter for the source and transform the parameter if necessary.
@@ -213,18 +211,18 @@ func (re *Reddit) ValidateTransformParameter(ctx context.Context, param string) 
 
 	// If no patterns match, return error with helpful message
 	return "", fmt.Errorf("invalid Reddit parameter format. Supported patterns:\n" +
-		"- https://[www.]reddit.com/u/<user>\n" +
-		"- https://[www.]reddit.com/u/<user>.json\n" +
-		"- https://[www.]reddit.com/user/<user>\n" +
-		"- https://[www.]reddit.com/user/<user>.json\n" +
-		"- https://[www.]reddit.com/r/<subreddit>\n" +
-		"- https://[www.]reddit.com/r/<subreddit>.json\n" +
-		"- u/<user>\n" +
-		"- u/<user>.json\n" +
-		"- r/<subreddit>\n" +
-		"- r/<subreddit>.json\n" +
-		"- user/<user> (will be normalized to u/<user>)\n" +
-		"- user/<user>.json (will be normalized to u/<user>)\n" +
+		"- https://reddit.com/u/<user>\n" +
+		"- https://reddit.com/u/<user>.json\n" +
+		"- https://reddit.com/user/<user>\n" +
+		"- https://reddit.com/user/<user>.json\n" +
+		"- https://reddit.com/r/<subreddit>\n" +
+		"- https://reddit.com/r/<subreddit>.json\n" +
+		"- /u/<user>\n" +
+		"- /u/<user>.json\n" +
+		"- /r/<subreddit>\n" +
+		"- /r/<subreddit>.json\n" +
+		"- /user/<user> (will be normalized to /u/<user>)\n" +
+		"- /user/<user>.json (will be normalized to /u/<user>)\n" +
 		"\nBracketed means they are optional.",
 	)
 }
@@ -266,6 +264,19 @@ func (re *Reddit) validateAndNormalizeCasing(ctx context.Context, param string) 
 
 		// Remove leading slash and return the normalized path
 		strings.TrimPrefix(path, "/")
+
+		if path == "/subreddits/search" {
+			return "", fmt.Errorf("subreddit '%s' not found on Reddit", param[2:])
+		}
+		if p, cut := strings.CutPrefix(path, "/user/"); cut {
+			if resp.StatusCode == 404 {
+				return "", fmt.Errorf("user '%s' not found on Reddit", p)
+			}
+			path = "/u/" + p
+		}
+		if resp.StatusCode == 404 {
+			return "", fmt.Errorf("subreddit '%s' not found on Reddit or has been removed", path[2:])
+		}
 
 		return path, nil
 	}

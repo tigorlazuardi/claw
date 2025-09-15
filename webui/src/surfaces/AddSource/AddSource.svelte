@@ -45,13 +45,15 @@
 
   let selectedSource: AvailableSource | undefined = $state();
   let nameValid: boolean = $state(false);
+  let parameterValid: boolean = $state(false);
 
   let canSubmitForm = $derived.by(() => {
     return [
-      nameValid,
       addSourceRequest.name,
+      nameValid,
       selectedSource?.requireParameter && addSourceRequest.parameter,
       addSourceRequest.displayName,
+      parameterValid,
     ].every((f) => f);
   });
 
@@ -139,7 +141,13 @@
         bind:value={addSourceRequest.name}
       />
       {#if selectedSource}
-        {@render parameterInput(selectedSource)}
+        {#await import("./ParameterInput.svelte") then { default: ParameterInput }}
+          <ParameterInput
+            source={selectedSource}
+            bind:value={addSourceRequest.parameter}
+            bind:valid={parameterValid}
+          />
+        {/await}
         {@render displayNameInput()}
         {@render countbackInput(selectedSource)}
         {@render scheduleInputField()}
@@ -159,70 +167,6 @@
       <IconX />
     </button>
   </div>
-{/snippet}
-
-{#snippet parameterInput(source: AvailableSource)}
-  <fieldset class="fieldset">
-    <legend class="fieldset-legend">
-      <span>Parameters</span>
-      {#if source.requireParameter}
-        <span class="text-error">*</span>
-      {/if}
-      {#if hasParameterHelp}
-        <Popover.Root onOpenChange={(v) => (showParameterHelp = v)}>
-          <Popover.Trigger
-            class="btn btn-square btn-ghost btn-xs"
-            type="button"
-          >
-            <IconInfo />
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              class="z-[9999] bg-transparent"
-              data-theme="dracula"
-            >
-              <div class="card bg-base-300 border-base-200 border">
-                <div class="card-body">
-                  <div class="card-title">Parameter Help</div>
-                  <div
-                    class="p-4 border border-base-100"
-                    style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
-                  >
-                    {#if showParameterHelp}
-                      {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
-                        <MarkdownText text={source.parameterHelp} />
-                      {/await}
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      {/if}
-    </legend>
-    <textarea
-      class="textarea h-[3rem] w-full"
-      placeholder={source.parameterPlaceholder ||
-        "Configuration parameters (JSON, comma-separated values, etc.)"}
-      bind:this={parameterInputField}
-      bind:value={addSourceRequest.parameter}
-      onblur={handleValidateParamaterOnBlur}
-      disabled={$validateParameterQuery.isFetching}
-      required={source.requireParameter}
-    ></textarea>
-    {#if parameterInputField?.validity.customError}
-      <span class="label text-error">
-        {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
-          <MarkdownText text={parameterInputField?.validationMessage || ""} />
-        {/await}
-      </span>
-    {:else if source.requireParameter}
-      <span class="label">Required</span>
-    {:else}
-      <span class="label">Optional</span>
-    {/if}
-  </fieldset>
 {/snippet}
 
 {#snippet displayNameInput()}

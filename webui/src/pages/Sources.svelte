@@ -66,7 +66,7 @@
   {/if}
 
   {#if showAddModal}
-    {#await import("../surfaces/AddSource.svelte")}
+    {#await import("../surfaces/AddSource/AddSource.svelte")}
       <LoadingModal />
     {:then { default: AddSourceModal }}
       <AddSourceModal onCloseRequest={() => (showAddModal = false)} />

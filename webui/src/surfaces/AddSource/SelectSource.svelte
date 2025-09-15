@@ -45,6 +45,7 @@
       onSuccess(data) {
         if (data.sources.length === 1) {
           selected = data.sources[0];
+          value = data.sources[0].name;
           valid = true;
           onData?.(data, selected);
           return;
