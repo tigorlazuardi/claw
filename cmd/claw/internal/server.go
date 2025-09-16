@@ -142,7 +142,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if err := migrations.Migrate(ctx, db); err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
+		return err
 	}
 
 	errChan := make(chan error, 1)
