@@ -3,6 +3,8 @@
   import { getSourceServiceClient } from "../../connectrpc";
   import { toDate } from "../../connectrpc/js_date";
   import { parseCronExpression } from "cron-schedule";
+  import { Popover } from "bits-ui";
+  import IconInfo from "@lucide/svelte/icons/info";
 
   const queryClient = useQueryClient();
 
@@ -152,13 +154,14 @@
     <span>Schedule</span>
   </legend>
   <input
+    name="schedule"
     bind:this={scheduleInputState.element}
     type="text"
     class={{
       "input w-full": true,
     }}
     bind:value={scheduleInputState.value}
-    placeholder="0 0 * * FRI (every midnight at Friday)"
+    placeholder="e.g. 0 0 * * FRI (every midnight at Friday)"
     oninput={handleOnInput}
   />
   {#if scheduleInputState.nextRun}
@@ -185,3 +188,15 @@
     <p class="label">Schedule using Cron Expression</p>
   {/if}
 </fieldset>
+
+{#snippet helpText()}
+  <Popover.Root>
+    <Popover.Trigger class="btn btn-square btn-ghost btn-xs">
+      <IconInfo />
+    </Popover.Trigger>
+    <Popover.Portal>
+      <Popover.Content class="z-[9999] bg-transparent" data-theme="dracula"
+      ></Popover.Content>
+    </Popover.Portal>
+  </Popover.Root>
+{/snippet}

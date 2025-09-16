@@ -6,6 +6,7 @@
     value: number;
     source: AvailableSource;
   }
+  import { theme } from "../../store/theme";
 
   let { value = $bindable(0), source }: Props = $props();
 
@@ -20,7 +21,7 @@
         <IconInfo />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content class="z-[9999] bg-transparent" data-theme="dracula">
+        <Popover.Content class="z-[9999] bg-transparent" data-theme={$theme}>
           <div class="card bg-base-300 border-base-200 border">
             <div class="card-body">
               <div class="card-title flex-col items-start">
