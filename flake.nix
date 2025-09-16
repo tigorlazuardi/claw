@@ -63,11 +63,11 @@
 
               (writeShellScriptBin "dev" ''
                 systemd-run --user --scope --unit=claw-dev ${writeShellScript "dev" ''
+                  cd ''${PROJECT_DIR}
                   foot wgo -file =.sql clear :: go run ./cmd/goose/main.go --reset :: go run ./cmd/go-jet/main.go &
-                  foot --working-directory=$(pwd)/webui npm run dev &
+                  foot --working-directory=$(pwd)/webui wgo -file=svelte.config.js npm run dev &
                   foot --working-directory=$(pwd)/schemas wgo -file=.proto -file=buf.gen.yaml -file=buf.yaml clear :: buf generate :: echo "Protobuf generated. Watching for changes..." &
-                  sleep 0.2
-                  foot wgo -file=.go clear :: go run ./cmd/claw/main.go server &
+                  foot wgo -postpone -file=.go clear :: go run ./cmd/claw/main.go server &
                 ''}
               '')
               (writeShellScriptBin "stop" ''
@@ -106,6 +106,7 @@
               export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
               export CLAW_SERVER__WEBUI__PATH="$(pwd)/cmd/claw/internal/webui"
               export CLAW_SERVER__WEBUI__DEV_MODE=true
+              export PROJECT_DIR="$(pwd)"
               echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
               echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
 
