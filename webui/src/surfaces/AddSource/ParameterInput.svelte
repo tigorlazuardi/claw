@@ -1,17 +1,14 @@
 <script lang="ts">
   import type {
     AvailableSource,
-    ValidateSourceParametersRequest,
+    ValidateSourceParametersResponse,
   } from "../../gen/claw/v1/source_service_pb";
   import { Popover } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
-  import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
   import { getSourceServiceClient } from "../../connectrpc";
-  import type { M } from "../../types";
   import IconCheck from "@lucide/svelte/icons/check";
   import { theme } from "../../store/theme";
-
-  const queryClient = useQueryClient();
+  import { resource, watch } from "runed";
 
   interface Props {
     source: AvailableSource;
@@ -26,54 +23,62 @@
   const hasParameterHelp = source.parameterHelp.trim().length > 0;
   let showParameterHelp = $state(false);
 
-  let validateParameterRequest: M<ValidateSourceParametersRequest> = $derived({
-    sourceName: source.name,
-    parameter: value,
-  });
-
-  let parameterInputField: HTMLTextAreaElement | undefined = $state();
-
-  const validateParameterQuery = useQuery(
-    ["source", "add", "validateParameter"],
-    () =>
-      getSourceServiceClient().then((client) =>
-        client.validateSourceParameters(validateParameterRequest),
-      ),
+  const validateParameter = resource(
+    () => ({ source, value }),
+    async (val, prev, { data, signal }) => {
+      if (!val.value.trim()) return;
+      if (val.value.trim() === prev?.value.trim())
+        return data as ValidateSourceParametersResponse;
+      return getSourceServiceClient({ signal }).then((client) =>
+        client.validateSourceParameters({
+          sourceName: val.source.name,
+          parameter: val.value,
+        }),
+      );
+    },
     {
-      onSuccess(data) {
-        parameterInputField?.setCustomValidity("");
+      lazy: true,
+      debounce: 500,
+    },
+  );
+
+  let error = $state("");
+
+  watch(
+    () => validateParameter.current,
+    (data) => {
+      if (data) {
+        error = "";
         if (data.transformedParameter) {
           value = data.transformedParameter;
-          valid = true;
         }
-      },
-      onError(err: Error) {
+        valid = true;
+      }
+    },
+  );
+  watch(
+    () => validateParameter.error,
+    (err) => {
+      if (err) {
+        error = err.message;
         valid = false;
-        parameterInputField?.setCustomValidity(err.message);
-        parameterInputField?.reportValidity();
-      },
-      enabled: false, // Only run on demand
-      retry: false,
+        return;
+      }
     },
   );
 
   function handleValidateParamaterOnBlur() {
-    if (valid) {
-      return;
-    }
-    if (source.requireParameter && value.trim().length === 0) {
-      parameterInputField?.setCustomValidity("This field is required.");
-      valid = false;
-      return;
-    }
     if (value.trim().length === 0) {
-      // No need to validate empty optional parameters
-      parameterInputField?.setCustomValidity("");
+      if (source.requireParameter) {
+        error = "This field is required";
+        valid = false;
+        return;
+      }
+      error = "";
       valid = true;
       return;
     }
-    queryClient.cancelQueries(["source", "add", "validateParameter"]);
-    $validateParameterQuery.refetch();
+    validateParameter.refetch();
   }
 
   const allOk = $derived(
@@ -122,7 +127,6 @@
     }}
     placeholder={source.parameterPlaceholder ||
       "Configuration parameters (JSON, comma-separated values, etc.)"}
-    bind:this={parameterInputField}
     bind:value
     onblur={handleValidateParamaterOnBlur}
     oninput={() => {
@@ -130,18 +134,17 @@
         valid = false;
       }
     }}
-    disabled={$validateParameterQuery.isFetching}
     required={source.requireParameter}
   ></textarea>
-  {#if $validateParameterQuery.isFetching}
+  {#if validateParameter.loading}
     <div class="alert alert-warning alert-soft">
       <div class="loading loading-spinner"></div>
       <span>Validating...</span>
     </div>
-  {:else if parameterInputField?.validity.customError}
+  {:else if error}
     {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
       <div role="alert" class="alert alert-error alert-soft">
-        <MarkdownText text={parameterInputField?.validationMessage || ""} />
+        <MarkdownText text={error} />
       </div>
     {/await}
   {:else if valid && source.requireParameter}

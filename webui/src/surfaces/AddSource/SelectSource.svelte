@@ -3,8 +3,9 @@
     AvailableSource,
     ListAvailableSourcesResponse,
   } from "../../gen/claw/v1/source_service_pb";
-  import { useQuery } from "@sveltestack/svelte-query";
   import { getSourceServiceClient } from "../../connectrpc";
+
+  import { resource, watch } from "runed";
 
   interface Props {
     /**
@@ -35,25 +36,30 @@
     value = $bindable(""),
   }: Props = $props();
 
-  const listAvailableSources = useQuery(
-    ["sources", "add", "listDropDown"],
-    () =>
-      getSourceServiceClient().then((client) =>
-        client.listAvailableSources({}),
-      ),
-    {
-      onSuccess(data) {
-        if (data.sources.length === 1) {
-          selected = data.sources[0];
-          value = data.sources[0].name;
-          valid = true;
-          onData?.(data, selected);
-          return;
-        }
-        onData?.(data);
-      },
+  const availableSourcesResource = resource(
+    () => ({}),
+    async (query, _, { signal }) => {
+      const client = await getSourceServiceClient({ signal });
+      return client.listAvailableSources(query);
     },
   );
+
+  watch(
+    () => availableSourcesResource.current,
+    (data) => {
+      if (data?.sources?.length === 1) {
+        selected = data.sources[0];
+        value = data.sources[0].name;
+        valid = true;
+        onData?.(data, selected);
+        return;
+      }
+      if (data) {
+        onData?.(data);
+      }
+    },
+  );
+
   const allOk = $derived(valid && !!selected);
 </script>
 
@@ -70,12 +76,12 @@
       <div></div>
     {/if}
   </legend>
-  {#if $listAvailableSources.isLoading}
+  {#if availableSourcesResource.loading}
     {@render loadingSources()}
-  {:else if $listAvailableSources.isSuccess}
-    {@render sourcesInput($listAvailableSources.data)}
+  {:else if availableSourcesResource.current}
+    {@render sourcesInput(availableSourcesResource.current)}
   {:else}
-    {@render sourcesError($listAvailableSources.error)}
+    {@render sourcesError(availableSourcesResource.error)}
   {/if}
 </fieldset>
 
@@ -91,7 +97,7 @@
   <select
     onchange={(e) => {
       valid = e.currentTarget.validity.valid;
-      selected = $listAvailableSources.data?.sources.find(
+      selected = availableSourcesResource.current?.sources.find(
         (s) => s.name === e.currentTarget.value,
       );
     }}

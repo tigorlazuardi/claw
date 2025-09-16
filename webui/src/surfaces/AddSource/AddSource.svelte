@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useMutation, useQueryClient } from "@sveltestack/svelte-query";
+  import { createMutation, useQueryClient } from "@tanstack/svelte-query";
   import type { M } from "../../types";
   import type {
     AvailableSource,
@@ -8,7 +8,6 @@
   import IconX from "@lucide/svelte/icons/x";
   import { getSourceServiceClient } from "../../connectrpc";
   import SelectSource from "./SelectSource.svelte";
-  import SchedulesInput from "./SchedulesInput.svelte";
 
   interface Props {
     /**
@@ -22,13 +21,6 @@
     onCloseRequest: () => void;
   }
 
-  type Schedule = {
-    pattern: string;
-    nextRun?: Date;
-  };
-  const schedules = $state<Schedule[]>([]);
-  const schedulePatterns = $derived(schedules.map((s) => s.pattern));
-
   let addSourceRequest = $state<M<CreateSourceRequest>>({
     name: "",
     parameter: "",
@@ -37,6 +29,8 @@
     isDisabled: false,
     schedules: [],
   });
+
+  const queryClient = useQueryClient();
 
   let selectedSource: AvailableSource | undefined = $state();
   let nameValid: boolean = $state(false);
@@ -54,26 +48,26 @@
 
   const { onCloseRequest }: Props = $props();
 
-  const createSourceMutation = useMutation((req: M<CreateSourceRequest>) =>
-    getSourceServiceClient().then((client) => client.createSource(req)),
-  );
+  const createSourceMutation = createMutation({
+    mutationKey: ["sources", "create"],
+    mutationFn: async function (req: M<CreateSourceRequest>) {
+      const client = await getSourceServiceClient();
+      return client.createSource(req);
+    },
+  });
 
-  function handleOnSubmit() {
+  async function handleOnSubmit() {
     if (!canSubmitForm) {
       return;
     }
-    $createSourceMutation.mutate(
-      {
-        ...addSourceRequest,
-        schedules: schedulePatterns,
+    return $createSourceMutation.mutateAsync(addSourceRequest, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["sources", "list"],
+        });
+        onCloseRequest();
       },
-      {
-        onSuccess: () => {
-          useQueryClient().invalidateQueries(["sources", "list"]);
-          onCloseRequest();
-        },
-      },
-    );
+    });
   }
 </script>
 
@@ -113,6 +107,20 @@
         {#await import("./SchedulesInput.svelte") then { default: SchedulesInput }}
           <SchedulesInput bind:value={addSourceRequest.schedules} />
         {/await}
+        {#await import("./Actions.svelte") then { default: Actions }}
+          <Actions
+            onclick={(evt, immediate) => {
+              // TODO: Handle immediate run after creation
+              evt.preventDefault();
+              handleOnSubmit();
+            }}
+            oncancel={(evt) => {
+              evt.preventDefault();
+              onCloseRequest();
+            }}
+            disabled={!canSubmitForm || $createSourceMutation.isPending}
+          />
+        {/await}
       {/if}
     </form>
   </div>
@@ -129,20 +137,4 @@
       <IconX />
     </button>
   </div>
-{/snippet}
-
-{#snippet scheduleInputField()}
-  <fieldset class="fieldset">
-    <legend class="fieldset-legend">
-      <span>Schedules</span>
-    </legend>
-    <input
-      type="text"
-      class="input w-full"
-      bind:value={addSourceRequest.displayName}
-      placeholder="Schedule pattern"
-      required
-    />
-    <p class="label"></p>
-  </fieldset>
 {/snippet}

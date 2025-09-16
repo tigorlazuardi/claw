@@ -1,35 +1,39 @@
 <script lang="ts">
-  import { useQueryClient } from "@sveltestack/svelte-query";
   import { getSourceServiceClient } from "../../connectrpc";
   import { toDate } from "../../connectrpc/js_date";
   import { parseCronExpression } from "cron-schedule";
-  import { Popover } from "bits-ui";
+  import { Popover, Combobox } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
-
-  const queryClient = useQueryClient();
+  import { resource } from "runed";
 
   interface Props {
     value: string[];
   }
 
-  let { value = $bindable([]) }: Props = $props();
+  let scheduleInputValue = $state("");
 
-  async function getNextRun(pattern: string) {
-    return queryClient.fetchQuery(
-      ["schedules", "nextRun", pattern],
-      () =>
-        getSourceServiceClient().then((client) =>
-          client.getCronNextTime({
-            cronExpression: pattern,
-          }),
-        ),
-      {
-        staleTime: 60 * 1000,
-        cacheTime: 60 * 1000,
-        retry: false,
-      },
-    );
+  const scheduleInputNextRunResource = resource(
+    () => scheduleInputValue,
+    async (pattern, _, { signal }) => {
+      if (!pattern.trim()) {
+        return;
+      }
+      return getNextRun(pattern, signal);
+    },
+    {
+      debounce: 300,
+    },
+  );
+
+  async function getNextRun(pattern: string, signal?: AbortSignal) {
+    parseCronExpression(pattern);
+    const client = await getSourceServiceClient({ signal });
+    return client.getCronNextTime({
+      cronExpression: pattern,
+    });
   }
+
+  const { value = $bindable([]) }: Props = $props();
 
   type ScheduleEntry = {
     pattern: string;
@@ -38,156 +42,169 @@
     zone?: string;
   };
 
-  const schedules = $derived.by(async () => {
-    const result: ScheduleEntry[] = [];
-    for (const pattern of value) {
-      const entry: ScheduleEntry = { pattern };
-      try {
-        parseCronExpression(pattern);
-        const resp = await getNextRun(pattern);
-        entry.nextRun = toDate(resp.nextTime!);
-      } catch (err) {
-        if (err instanceof Error) {
-          entry.error = err.message;
-        } else {
-          entry.error = "Invalid cron expression";
-        }
-      }
-      result.push(entry);
-    }
-    return result;
-  });
+  const schedules: Promise<ScheduleEntry[]> = $derived(
+    Promise.allSettled(value.map((pattern) => getNextRun(pattern))).then(
+      (results) =>
+        results.map((res, idx) =>
+          res.status === "fulfilled"
+            ? {
+                pattern: value[idx],
+                nextRun: toDate(res.value.nextTime!),
+                zone: res.value.zone || "UTC",
+              }
+            : {
+                pattern: value[idx],
+                error:
+                  res.reason instanceof Error
+                    ? res.reason.message
+                    : `${res.reason}`,
+              },
+        ),
+    ),
+  );
 
   type PatternOption = {
-    label: string;
     pattern: string;
     description: string;
   };
 
-  type ScheduleInputState = {
-    value: string;
-    element?: HTMLInputElement;
-    nextRun?: Date;
-    error?: string;
-    zone?: string;
-  };
-
-  let scheduleInputState: ScheduleInputState = $state({ value: "" });
-  const cleanedValue = $derived(scheduleInputState.value.trim());
-
-  async function handleOnInput() {
-    scheduleInputState.element?.setCustomValidity("");
-    scheduleInputState.nextRun = undefined;
-    scheduleInputState.error = undefined;
-    scheduleInputState.zone = undefined;
-    if (!cleanedValue) {
-      return;
-    }
-    try {
-      parseCronExpression(cleanedValue);
-      queryClient.invalidateQueries(["schedules", "nextRun", cleanedValue]);
-      const resp = await getNextRun(cleanedValue);
-      scheduleInputState.nextRun = toDate(resp.nextTime!);
-      scheduleInputState.zone = resp.zone || "UTC";
-    } catch (err) {
-      if (err instanceof Error) {
-        scheduleInputState.element?.setCustomValidity(err.message);
-        scheduleInputState.error = err.message;
-      } else {
-        scheduleInputState.element?.setCustomValidity(`${err}`);
-        scheduleInputState.error = `Invalid cron expression: ${err}`;
+  function genDropdownDays(): PatternOption[] {
+    const hours = Array.from({ length: 24 }).keys();
+    const dayOfWeeks = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const patterns: PatternOption[] = [];
+    for (const hour of hours) {
+      for (const day of dayOfWeeks) {
+        const d = day.slice(0, 3).toUpperCase();
+        patterns.push({
+          pattern: `0 ${hour} * * ${d}`,
+          description: `At ${hour}:00 on ${day}`,
+        });
       }
+      patterns.push({
+        pattern: `0 ${hour} * * *`,
+        description: `At ${hour}:00 every day`,
+      });
     }
+    return patterns;
   }
 
   const patternDropdownList: PatternOption[] = [
     {
-      label: "Every minute",
       pattern: "* * * * *",
       description: "Runs every minute",
     },
     {
-      label: "Every minute (alt)",
       pattern: "@minutely",
       description: "Runs every minute",
     },
     {
-      label: "Every 5 minutes",
       pattern: "*/5 * * * *",
       description: "Runs every 5 minutes",
     },
     {
-      label: "Every 15 minutes",
       pattern: "*/15 * * * *",
       description: "Runs every 15 minutes",
     },
     {
-      label: "Every 30 minutes",
       pattern: "*/30 * * * *",
       description: "Runs every 30 minutes",
     },
     {
-      label: "Every hour",
       pattern: "0 * * * *",
       description: "Runs at the start of every hour",
     },
-    {
-      label: "Daily at midnight",
-      pattern: "0 0 * * *",
-      description: "Runs daily at midnight",
-    },
-    {
-      label: "Weekly on Sunday at midnight",
-      pattern: "0 0 * * 0",
-      description: "Runs weekly on Sunday at midnight",
-    },
-    {
-      label: "Monthly on the 1st at midnight",
-      pattern: "0 0 1 * *",
-      description: "Runs monthly on the 1st at midnight",
-    },
-  ];
+  ].concat(genDropdownDays());
+
+  const filteredPatternDropdownList = $derived.by(() => {
+    const text = scheduleInputValue.trim().toLowerCase();
+    if (!text) {
+      return patternDropdownList;
+    }
+    return patternDropdownList.filter(
+      (opt) =>
+        opt.pattern.toLowerCase().includes(text) ||
+        opt.description.toLowerCase().includes(text),
+    );
+  });
+
+  let showDropdown = $state(false);
 </script>
 
 <fieldset class="fieldset">
   <legend class="fieldset-legend">
     <span>Schedule</span>
   </legend>
-  <input
-    name="schedule"
-    bind:this={scheduleInputState.element}
-    type="text"
-    class={{
-      "input w-full": true,
-    }}
-    bind:value={scheduleInputState.value}
-    placeholder="e.g. 0 0 * * FRI (every midnight at Friday)"
-    oninput={handleOnInput}
-  />
-  {#if scheduleInputState.nextRun}
+  <div class="dropdown dropdown-top">
+    <input
+      name="schedule"
+      type="text"
+      class="input w-full"
+      bind:value={scheduleInputValue}
+      placeholder="e.g. 0 0 * * FRI (every midnight at Friday)"
+      onfocus={() => (showDropdown = true)}
+      onblur={() => {
+        showDropdown = false;
+      }}
+    />
+  </div>
+  {#if scheduleInputNextRunResource.error}
+    <div class="alert alert-error alert-soft">
+      <span>{scheduleInputNextRunResource.error.message}</span>
+    </div>
+  {:else if scheduleInputNextRunResource.loading}
+    <div class="alert alert-warning alert-soft">
+      <span class="loading loading-spinner"></span>
+      <span>Validating cron expression...</span>
+    </div>
+  {:else if scheduleInputNextRunResource.current}
+    {@const data = scheduleInputNextRunResource.current}
     {@const locale = Intl.NumberFormat().resolvedOptions().locale}
+    {@const date = toDate(data.nextTime!)}
     <div class="alert alert-success alert-soft mt-2">
       <span>
-        Next run time: {scheduleInputState.nextRun.toLocaleString(locale)} (adjusted
-        to current timezone {Intl.DateTimeFormat().resolvedOptions().timeZone}).
-        Server time: {scheduleInputState.nextRun.toLocaleString(locale, {
-          timeZone: scheduleInputState.zone,
-        })} ({scheduleInputState.zone}).
+        Next run time: {date.toLocaleString(locale)} (adjusted to current timezone
+        {locale}). Server time: {date.toLocaleString(locale, {
+          timeZone: data.zone,
+        })} ({data.zone}).
       </span>
-    </div>
-  {:else if queryClient.isFetching(["schedules", "nextRun"])}
-    <div class="alert alert-error alert-soft">
-      <span class="loading loading-spinner"></span>
-      <span>Checking next run time on the server...</span>
-    </div>
-  {:else if scheduleInputState.error}
-    <div class="alert alert-error alert-soft">
-      <span>{scheduleInputState.error}</span>
     </div>
   {:else}
     <p class="label">Schedule using Cron Expression</p>
   {/if}
 </fieldset>
+
+{#snippet dropdownList(list: PatternOption[])}
+  <ul class="dropdown-content menu w-full bg-base-100 shadow-sm z-[999999]">
+    {#each list as { pattern, description } (pattern)}
+      <li
+        class="btn flex-col items-start justify-center p-0 px-4 m-0 h-[4rem] gap-0"
+      >
+        <span>{pattern}</span>
+        <span class="font-normal">{description}</span>
+      </li>
+    {/each}
+  </ul>
+{/snippet}
+
+{#snippet comboInput()}
+  <Combobox.Root
+    type="single"
+    bind:value={scheduleInputValue}
+    open={showDropdown}
+  >
+    <fieldset class="fieldset">
+      <Combobox.Input></Combobox.Input>
+    </fieldset>
+  </Combobox.Root>
+{/snippet}
 
 {#snippet helpText()}
   <Popover.Root>

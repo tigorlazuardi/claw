@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useQuery, useQueryClient } from "@sveltestack/svelte-query";
+  import { useQuery, useQueryClient } from "@tanstack/svelte-query";
   import { form as formValidator, field } from "svelte-forms";
   import { required } from "svelte-forms/validators";
   import type { M } from "../types";

@@ -2,7 +2,7 @@
   import Sidebar from "./surfaces/Sidebar.svelte";
   import Routing from "./Routing.svelte";
   import { RouterView } from "@dvcol/svelte-simple-router/components";
-  import { QueryClient, QueryClientProvider } from "@sveltestack/svelte-query";
+  import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
   import { theme } from "./store/theme";
 
   const queryClient = new QueryClient();

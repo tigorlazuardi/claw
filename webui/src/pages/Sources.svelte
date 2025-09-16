@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { useQuery } from "@sveltestack/svelte-query";
   import LoadingModal from "../components/LoadingModal.svelte";
   import { getSourceServiceClient } from "../connectrpc";
   import type {
@@ -8,6 +7,7 @@
   } from "../gen/claw/v1/source_service_pb";
   import type { Source } from "../gen/claw/v1/source_pb";
   import IconImport from "@lucide/svelte/icons/import";
+  import { resource } from "runed";
 
   import { toQuery, fromQuery } from "query-string-parser";
   import type { M } from "../types";
@@ -26,17 +26,19 @@
     history.replaceState(null, "", location.pathname + qs);
   });
 
-  const listSources = useQuery(
-    ["sources", "list", queryState],
-    async () => {
-      const client = await getSourceServiceClient();
+  const listResource = resource(
+    () => queryState,
+    async (queryState, _, { signal }) => {
+      const client = await getSourceServiceClient({ signal });
       return client.listSources(queryState);
     },
     {
-      keepPreviousData: true,
+      debounce: 300,
     },
   );
 </script>
+
+<svelte:window onfocus={() => listResource.refetch()} />
 
 <div class="p-[2rem] 2xl:max-w-[60vw] max-w-full m-auto">
   <div class="flex justify-between items-start mb-[2rem]">
@@ -55,12 +57,12 @@
   </div>
   <div class="divider"></div>
 
-  {#if $listSources.isLoading}
+  {#if listResource.loading}
     {@render loading()}
-  {:else if $listSources.isError}
-    {@render error($listSources.error as Error)}
-  {:else if $listSources.data?.sources.length}
-    {@render data($listSources.data)}
+  {:else if listResource.error}
+    {@render error(listResource.error)}
+  {:else if listResource.current?.sources.length}
+    {@render data(listResource.current)}
   {:else}
     {@render emptyState()}
   {/if}
