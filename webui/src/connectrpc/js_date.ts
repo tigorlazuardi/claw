@@ -1,5 +1,5 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import type { M } from "../types";
+import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
 
 /**
  * Converts a `Timestamp` to a JavaScript `Date`.
@@ -7,10 +7,8 @@ import type { M } from "../types";
  * @param timestamp - The `Timestamp` to convert.
  * @returns The corresponding JavaScript `Date`.
  */
-export function toDate(timestamp: M<Timestamp>): Date {
-  return new Date(
-    Number(timestamp.seconds) * 1000 + timestamp.nanos / 1_000_000,
-  );
+export function toDate(timestamp: Timestamp): Date {
+  return timestampDate(timestamp);
 }
 
 /**
@@ -22,8 +20,6 @@ export function toDate(timestamp: M<Timestamp>): Date {
  * @param date - The JavaScript `Date` to convert.
  * @returns The corresponding `Timestamp`.
  */
-export function fromDate(date: Date): M<Timestamp> {
-  const seconds = Math.floor(date.getTime() / 1000);
-  const nanos = (date.getTime() % 1000) * 1_000_000;
-  return { seconds: BigInt(seconds), nanos };
+export function fromDate(date: Date): Timestamp {
+  return timestampFromDate(date);
 }
