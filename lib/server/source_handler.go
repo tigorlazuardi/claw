@@ -99,6 +99,7 @@ func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Reques
 
 	resp := &clawv1.GetCronNextTimeResponse{
 		NextTime: timestamppb.New(nextTime),
+		Zone:     nextTime.Location().String(),
 	}
 
 	return connect.NewResponse(resp), nil

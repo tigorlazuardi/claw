@@ -32,6 +32,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "bits-ui": "^2.9.6",
     "cron-parser": "^5.3.1",
+    "cron-schedule": "^5.0.4",
     "query-string-parser": "^1.0.0",
     "svelte-bricks": "^0.3.2",
     "svelte-exmarkdown": "^5.0.2",

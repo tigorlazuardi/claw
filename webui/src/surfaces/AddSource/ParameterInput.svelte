@@ -49,6 +49,7 @@
       onError(err: Error) {
         valid = false;
         parameterInputField?.setCustomValidity(err.message);
+        parameterInputField?.reportValidity();
       },
       enabled: false, // Only run on demand
       retry: false,

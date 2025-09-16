@@ -93,12 +93,17 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 				handler.Handle(ctx, record)
 			}
 		} else {
+			handler := c.logger.Handler()
+			if !handler.Enabled(ctx, slog.LevelError) {
+				return resp, err
+			}
 			code := connect.CodeInternal
 			if e := (&connect.Error{}); errors.As(err, &e) {
 				code = e.Code()
 			}
 			msg := fmt.Sprintf("RPC %s %s %s", procedure, code, duration)
-			c.logger.ErrorContext(ctx, msg,
+			record := slog.NewRecord(time.Now(), slog.LevelError, msg, getEnpointInfoPC(ctx))
+			record.AddAttrs(
 				slog.String("type", "unary_rpc"),
 				slog.String("procedure", procedure),
 				slog.Duration("duration", duration),
@@ -107,6 +112,7 @@ func (c *loggerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 				slog.String("status", "error"),
 				slog.String("error", err.Error()),
 			)
+			handler.Handle(ctx, record)
 		}
 
 		return resp, err

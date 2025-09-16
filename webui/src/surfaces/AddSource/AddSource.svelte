@@ -8,6 +8,7 @@
   import IconX from "@lucide/svelte/icons/x";
   import { getSourceServiceClient } from "../../connectrpc";
   import SelectSource from "./SelectSource.svelte";
+  import SchedulesInput from "./SchedulesInput.svelte";
 
   interface Props {
     /**
@@ -28,12 +29,13 @@
   const schedules = $state<Schedule[]>([]);
   const schedulePatterns = $derived(schedules.map((s) => s.pattern));
 
-  let addSourceRequest = $state<Omit<M<CreateSourceRequest>, "schedules">>({
+  let addSourceRequest = $state<M<CreateSourceRequest>>({
     name: "",
     parameter: "",
     displayName: "",
     countback: 0,
     isDisabled: false,
+    schedules: [],
   });
 
   let selectedSource: AvailableSource | undefined = $state();
@@ -108,7 +110,9 @@
             source={selectedSource}
           />
         {/await}
-        {@render scheduleInputField()}
+        {#await import("./SchedulesInput.svelte") then { default: SchedulesInput }}
+          <SchedulesInput bind:value={addSourceRequest.schedules} />
+        {/await}
       {/if}
     </form>
   </div>

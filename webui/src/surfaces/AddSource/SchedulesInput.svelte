@@ -2,7 +2,7 @@
   import { useQueryClient } from "@sveltestack/svelte-query";
   import { getSourceServiceClient } from "../../connectrpc";
   import { toDate } from "../../connectrpc/js_date";
-  import CronExpressionParser from "cron-parser";
+  import { parseCronExpression } from "cron-schedule";
 
   const queryClient = useQueryClient();
 
@@ -24,6 +24,7 @@
       {
         staleTime: 60 * 1000,
         cacheTime: 60 * 1000,
+        retry: false,
       },
     );
   }
@@ -32,6 +33,7 @@
     pattern: string;
     nextRun?: Date;
     error?: string;
+    zone?: string;
   };
 
   const schedules = $derived.by(async () => {
@@ -39,10 +41,9 @@
     for (const pattern of value) {
       const entry: ScheduleEntry = { pattern };
       try {
-        CronExpressionParser.parse(pattern);
+        parseCronExpression(pattern);
         const resp = await getNextRun(pattern);
-        resp.nextTime;
-        entry.nextRun = toDate(resp.nextTime);
+        entry.nextRun = toDate(resp.nextTime!);
       } catch (err) {
         if (err instanceof Error) {
           entry.error = err.message;
@@ -60,6 +61,42 @@
     pattern: string;
     description: string;
   };
+
+  type ScheduleInputState = {
+    value: string;
+    element?: HTMLInputElement;
+    nextRun?: Date;
+    error?: string;
+    zone?: string;
+  };
+
+  let scheduleInputState: ScheduleInputState = $state({ value: "" });
+  const cleanedValue = $derived(scheduleInputState.value.trim());
+
+  async function handleOnInput() {
+    scheduleInputState.element?.setCustomValidity("");
+    scheduleInputState.nextRun = undefined;
+    scheduleInputState.error = undefined;
+    scheduleInputState.zone = undefined;
+    if (!cleanedValue) {
+      return;
+    }
+    try {
+      parseCronExpression(cleanedValue);
+      queryClient.invalidateQueries(["schedules", "nextRun", cleanedValue]);
+      const resp = await getNextRun(cleanedValue);
+      scheduleInputState.nextRun = toDate(resp.nextTime!);
+      scheduleInputState.zone = resp.zone || "UTC";
+    } catch (err) {
+      if (err instanceof Error) {
+        scheduleInputState.element?.setCustomValidity(err.message);
+        scheduleInputState.error = err.message;
+      } else {
+        scheduleInputState.element?.setCustomValidity(`${err}`);
+        scheduleInputState.error = `Invalid cron expression: ${err}`;
+      }
+    }
+  }
 
   const patternDropdownList: PatternOption[] = [
     {
@@ -114,4 +151,37 @@
   <legend class="fieldset-legend">
     <span>Schedule</span>
   </legend>
+  <input
+    bind:this={scheduleInputState.element}
+    type="text"
+    class={{
+      "input w-full": true,
+    }}
+    bind:value={scheduleInputState.value}
+    placeholder="0 0 * * FRI (every midnight at Friday)"
+    oninput={handleOnInput}
+  />
+  {#if scheduleInputState.nextRun}
+    {@const locale = Intl.NumberFormat().resolvedOptions().locale}
+    <div class="alert alert-success alert-soft mt-2">
+      <span>
+        Next run time: {scheduleInputState.nextRun.toLocaleString(locale)} (adjusted
+        to current timezone {Intl.DateTimeFormat().resolvedOptions().timeZone}).
+        Server time: {scheduleInputState.nextRun.toLocaleString(locale, {
+          timeZone: scheduleInputState.zone,
+        })} ({scheduleInputState.zone}).
+      </span>
+    </div>
+  {:else if queryClient.isFetching(["schedules", "nextRun"])}
+    <div class="alert alert-error alert-soft">
+      <span class="loading loading-spinner"></span>
+      <span>Checking next run time on the server...</span>
+    </div>
+  {:else if scheduleInputState.error}
+    <div class="alert alert-error alert-soft">
+      <span>{scheduleInputState.error}</span>
+    </div>
+  {:else}
+    <p class="label">Schedule using Cron Expression</p>
+  {/if}
 </fieldset>

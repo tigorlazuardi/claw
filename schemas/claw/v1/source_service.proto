@@ -229,6 +229,10 @@ message GetCronNextTimeResponse {
   // Next scheduled time based on the cron expression adjusted to
   // server's time zone.
   google.protobuf.Timestamp next_time = 1;
+
+  // Time zone is the server's time zone, using IANA Time Zone database format
+  // (e.g., "America/New_York", "UTC", "Asia/Tokyo")
+  string zone = 2;
 }
 
 // Validate source parameters request
