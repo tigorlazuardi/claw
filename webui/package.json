@@ -29,7 +29,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/svelte-query": "^5.89.0",
     "bits-ui": "^2.9.6",
-    "cron-schedule": "^5.0.4",
+    "cronstrue": "^3.3.0",
     "query-string-parser": "^1.0.0",
     "runed": "^0.31.1",
     "svelte-bricks": "^0.3.2",

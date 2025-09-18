@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 
 	"connectrpc.com/connect"
 	"github.com/adhocore/gronx"
@@ -88,7 +89,7 @@ func (h *SourceHandler) GetCronNextTime(ctx context.Context, req *connect.Reques
 
 	// Validate the cron expression
 	if !gron.IsValid(req.Msg.CronExpression) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid cron expression"))
 	}
 
 	// Get the next run time
