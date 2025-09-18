@@ -7,7 +7,7 @@
   } from "../gen/claw/v1/source_service_pb";
   import type { Source } from "../gen/claw/v1/source_pb";
   import IconImport from "@lucide/svelte/icons/import";
-  import { resource } from "runed";
+  import { resource, useDebounce, watch } from "runed";
 
   import { toQuery, fromQuery } from "query-string-parser";
   import type { M } from "../types";
@@ -16,15 +16,26 @@
 
   type QueryState = Partial<M<ListSourcesRequest>>;
 
-  let queryState: QueryState = $state(fromQuery(location.search) || {});
+  let queryState: QueryState = $state(
+    fromQuery(location.search) || {
+      includeSchedules: true,
+    },
+  );
 
-  $effect(() => {
-    let qs = toQuery(queryState);
-    if (qs !== "") {
-      qs = `?${qs}`;
-    }
-    history.replaceState(null, "", location.pathname + qs);
-  });
+  const debouncedUpdate = useDebounce(() => listResource.refetch());
+
+  watch(
+    () => queryState,
+    (queryState, previous) => {
+      if (!previous) return; // Do not run on first page load.
+      let qs = toQuery(queryState);
+      if (qs !== "") {
+        qs = `?${qs}`;
+      }
+      history.replaceState(null, "", location.pathname + qs);
+      debouncedUpdate();
+    },
+  );
 
   const listResource = resource(
     () => queryState,
@@ -32,13 +43,9 @@
       const client = await getSourceServiceClient({ signal });
       return client.listSources(queryState);
     },
-    {
-      debounce: 300,
-    },
+    { once: true }, // Only fetch once. Further updates will be via watch
   );
 </script>
-
-<svelte:window onfocus={() => listResource.refetch()} />
 
 <div class="p-[2rem] 2xl:max-w-[60vw] max-w-full m-auto">
   <div class="flex justify-between items-start mb-[2rem]">
@@ -78,7 +85,7 @@
 
 {#snippet loading()}
   <div class="flex justify-center items-center py-16">
-    <span class="loading loading-spinner loading-lg"></span>
+    <span class="loading loading-ring w-[8rem]"></span>
   </div>
 {/snippet}
 
