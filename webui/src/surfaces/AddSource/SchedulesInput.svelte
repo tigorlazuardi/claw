@@ -4,13 +4,21 @@
   import { parseCronExpression } from "cron-schedule";
   import { Popover, Combobox } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
-  import { resource } from "runed";
+  import { resource, watch } from "runed";
+  import { theme } from "../../store/theme";
 
   interface Props {
     value: string[];
   }
 
   let scheduleInputValue = $state("");
+
+  watch(
+    () => scheduleInputValue,
+    (val) => {
+      console.log($state.snapshot(val));
+    },
+  );
 
   const scheduleInputNextRunResource = resource(
     () => scheduleInputValue,
@@ -64,8 +72,8 @@
   );
 
   type PatternOption = {
-    pattern: string;
-    description: string;
+    value: string;
+    label: string;
   };
 
   function genDropdownDays(): PatternOption[] {
@@ -84,13 +92,13 @@
       for (const day of dayOfWeeks) {
         const d = day.slice(0, 3).toUpperCase();
         patterns.push({
-          pattern: `0 ${hour} * * ${d}`,
-          description: `At ${hour}:00 on ${day}`,
+          value: `0 ${hour} * * ${d}`,
+          label: `At ${hour}:00 on ${day}`,
         });
       }
       patterns.push({
-        pattern: `0 ${hour} * * *`,
-        description: `At ${hour}:00 every day`,
+        value: `0 ${hour} * * *`,
+        label: `At ${hour}:00 every day`,
       });
     }
     return patterns;
@@ -98,28 +106,28 @@
 
   const patternDropdownList: PatternOption[] = [
     {
-      pattern: "* * * * *",
-      description: "Runs every minute",
+      value: "* * * * *",
+      label: "Runs every minute",
     },
     {
-      pattern: "@minutely",
-      description: "Runs every minute",
+      value: "@minutely",
+      label: "Runs every minute",
     },
     {
-      pattern: "*/5 * * * *",
-      description: "Runs every 5 minutes",
+      value: "*/5 * * * *",
+      label: "Runs every 5 minutes",
     },
     {
-      pattern: "*/15 * * * *",
-      description: "Runs every 15 minutes",
+      value: "*/15 * * * *",
+      label: "Runs every 15 minutes",
     },
     {
-      pattern: "*/30 * * * *",
-      description: "Runs every 30 minutes",
+      value: "*/30 * * * *",
+      label: "Runs every 30 minutes",
     },
     {
-      pattern: "0 * * * *",
-      description: "Runs at the start of every hour",
+      value: "0 * * * *",
+      label: "Runs at the start of every hour",
     },
   ].concat(genDropdownDays());
 
@@ -130,81 +138,77 @@
     }
     return patternDropdownList.filter(
       (opt) =>
-        opt.pattern.toLowerCase().includes(text) ||
-        opt.description.toLowerCase().includes(text),
+        opt.value.toLowerCase().includes(text) ||
+        opt.label.toLowerCase().includes(text),
     );
   });
 
   let showDropdown = $state(false);
+
+  let inputField: HTMLInputElement | null = $state(null);
+
+  const isMobile = window.innerWidth < 640;
 </script>
 
-<fieldset class="fieldset">
-  <legend class="fieldset-legend">
-    <span>Schedule</span>
-  </legend>
-  <div class="dropdown dropdown-top">
-    <input
-      name="schedule"
-      type="text"
-      class="input w-full"
-      bind:value={scheduleInputValue}
-      placeholder="e.g. 0 0 * * FRI (every midnight at Friday)"
+<Combobox.Root
+  type="single"
+  inputValue={scheduleInputValue}
+  onValueChange={(value) => (scheduleInputValue = value.trim())}
+  open={showDropdown}
+>
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">
+      <span>Schedule</span>
+    </legend>
+    <Combobox.Input
+      placeholder="e.g. 0 0 * * FRI (Every midnight at Friday)"
+      oninput={(e) => (scheduleInputValue = e.currentTarget.value)}
       onfocus={() => (showDropdown = true)}
-      onblur={() => {
-        showDropdown = false;
-      }}
-    />
-  </div>
-  {#if scheduleInputNextRunResource.error}
-    <div class="alert alert-error alert-soft">
-      <span>{scheduleInputNextRunResource.error.message}</span>
-    </div>
-  {:else if scheduleInputNextRunResource.loading}
-    <div class="alert alert-warning alert-soft">
-      <span class="loading loading-spinner"></span>
-      <span>Validating cron expression...</span>
-    </div>
-  {:else if scheduleInputNextRunResource.current}
-    {@const data = scheduleInputNextRunResource.current}
-    {@const locale = Intl.NumberFormat().resolvedOptions().locale}
-    {@const date = toDate(data.nextTime!)}
-    <div class="alert alert-success alert-soft mt-2">
-      <span>
-        Next run time: {date.toLocaleString(locale)} (adjusted to current timezone
-        {locale}). Server time: {date.toLocaleString(locale, {
-          timeZone: data.zone,
-        })} ({data.zone}).
-      </span>
-    </div>
-  {:else}
-    <p class="label">Schedule using Cron Expression</p>
-  {/if}
-</fieldset>
-
-{#snippet dropdownList(list: PatternOption[])}
-  <ul class="dropdown-content menu w-full bg-base-100 shadow-sm z-[999999]">
-    {#each list as { pattern, description } (pattern)}
-      <li
-        class="btn flex-col items-start justify-center p-0 px-4 m-0 h-[4rem] gap-0"
+      onblur={() => (showDropdown = false)}
+      class="input w-full"
+      bind:ref={inputField}
+    ></Combobox.Input>
+  </fieldset>
+  <Combobox.Portal>
+    <Combobox.Content data-theme={$theme} class="z-[9999] bg-base-100">
+      <Combobox.Viewport
+        class="menu bg-base-100 border-base-content shadow-md"
+        style={{
+          width: inputField
+            ? `${inputField.getBoundingClientRect().width}px`
+            : undefined,
+        }}
       >
-        <span>{pattern}</span>
-        <span class="font-normal">{description}</span>
-      </li>
-    {/each}
-  </ul>
-{/snippet}
-
-{#snippet comboInput()}
-  <Combobox.Root
-    type="single"
-    bind:value={scheduleInputValue}
-    open={showDropdown}
-  >
-    <fieldset class="fieldset">
-      <Combobox.Input></Combobox.Input>
-    </fieldset>
-  </Combobox.Root>
-{/snippet}
+        {#each filteredPatternDropdownList as { value, label }, i (value)}
+          {#if i > 0}
+            <div class="divider my-0"></div>
+          {/if}
+          <Combobox.Item
+            {value}
+            label={value}
+            class="btn btn-ghost justify-between"
+          >
+            {#if !isMobile}
+              <span>{value}</span>
+            {/if}
+            <span class="font-normal">{label}</span>
+          </Combobox.Item>
+        {:else}
+          <Combobox.Item
+            label={scheduleInputValue}
+            value={scheduleInputValue}
+            class="btn btn-ghost justify-between"
+          >
+            {#if !isMobile}
+              <span>{scheduleInputValue}</span>
+            {/if}
+            <span class="font-normal">Custom Expression</span>
+          </Combobox.Item>
+        {/each}
+      </Combobox.Viewport>
+    </Combobox.Content>
+  </Combobox.Portal>
+</Combobox.Root>
 
 {#snippet helpText()}
   <Popover.Root>
