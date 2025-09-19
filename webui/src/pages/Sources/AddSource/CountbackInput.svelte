@@ -1,12 +1,12 @@
 <script lang="ts">
   import { Popover } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
-  import type { AvailableSource } from "../../gen/claw/v1/source_service_pb";
+  import type { AvailableSource } from "#/gen/claw/v1/source_service_pb";
   interface Props {
     value: number;
     source: AvailableSource;
   }
-  import { theme } from "../../store/theme";
+  import { theme } from "#/store/theme";
 
   let { value = $bindable(0), source }: Props = $props();
 

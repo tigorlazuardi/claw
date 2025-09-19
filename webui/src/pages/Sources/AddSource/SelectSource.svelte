@@ -2,8 +2,8 @@
   import type {
     AvailableSource,
     ListAvailableSourcesResponse,
-  } from "../../gen/claw/v1/source_service_pb";
-  import { getSourceServiceClient } from "../../connectrpc";
+  } from "#/gen/claw/v1/source_service_pb";
+  import { getSourceServiceClient } from "#/connectrpc";
 
   import { resource, watch } from "runed";
 

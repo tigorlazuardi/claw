@@ -1,16 +1,16 @@
 <script lang="ts">
-  import LoadingModal from "../components/LoadingModal.svelte";
-  import { getSourceServiceClient } from "../connectrpc";
+  import LoadingModal from "./AddSource/LoadingModal.svelte";
+  import { getSourceServiceClient } from "#/connectrpc";
   import type {
     ListSourcesRequest,
     ListSourcesResponse,
-  } from "../gen/claw/v1/source_service_pb";
-  import type { Source } from "../gen/claw/v1/source_pb";
+  } from "#/gen/claw/v1/source_service_pb";
+  import type { Source } from "#/gen/claw/v1/source_pb";
   import IconImport from "@lucide/svelte/icons/import";
   import { resource, useDebounce, watch } from "runed";
 
   import { toQuery, fromQuery } from "query-string-parser";
-  import type { M } from "../types";
+  import type { M } from "#/types";
 
   let showAddModal = $state(false);
 
@@ -63,9 +63,8 @@
     </button>
   </div>
   <div class="divider"></div>
-
   {#if listResource.loading}
-    {@render loading()}
+    <LoadingModal />
   {:else if listResource.error}
     {@render error(listResource.error)}
   {:else if listResource.current?.sources.length}
@@ -75,19 +74,13 @@
   {/if}
 
   {#if showAddModal}
-    {#await import("../surfaces/AddSource/AddSource.svelte")}
+    {#await import("#/pages/Sources/AddSource/AddSource.svelte")}
       <LoadingModal />
     {:then { default: AddSourceModal }}
       <AddSourceModal onCloseRequest={() => (showAddModal = false)} />
     {/await}
   {/if}
 </div>
-
-{#snippet loading()}
-  <div class="flex justify-center items-center py-16">
-    <span class="loading loading-ring w-[8rem]"></span>
-  </div>
-{/snippet}
 
 {#snippet data(data: ListSourcesResponse)}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

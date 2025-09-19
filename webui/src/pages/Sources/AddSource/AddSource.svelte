@@ -1,12 +1,12 @@
 <script lang="ts">
   import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-  import type { M } from "../../types";
+  import type { M } from "#/types";
   import type {
     AvailableSource,
     CreateSourceRequest,
-  } from "../../gen/claw/v1/source_service_pb";
+  } from "../../../gen/claw/v1/source_service_pb";
   import IconX from "@lucide/svelte/icons/x";
-  import { getSourceServiceClient } from "../../connectrpc";
+  import { getSourceServiceClient } from "../../../connectrpc";
   import SelectSource from "./SelectSource.svelte";
 
   interface Props {

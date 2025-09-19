@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { getSourceServiceClient } from "../../connectrpc";
-  import { toDate } from "../../connectrpc/js_date";
+  import { getSourceServiceClient } from "#/connectrpc";
+  import { toDate } from "#/connectrpc/js_date";
   import { Popover, Combobox } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
   import { resource, watch } from "runed";
-  import { theme } from "../../store/theme";
+  import { theme } from "#/store/theme";
   import cronstrue from "cronstrue";
 
   interface Props {

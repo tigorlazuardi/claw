@@ -2,12 +2,12 @@
   import type {
     AvailableSource,
     ValidateSourceParametersResponse,
-  } from "../../gen/claw/v1/source_service_pb";
+  } from "#/gen/claw/v1/source_service_pb";
   import { Popover } from "bits-ui";
   import IconInfo from "@lucide/svelte/icons/info";
-  import { getSourceServiceClient } from "../../connectrpc";
+  import { getSourceServiceClient } from "#/connectrpc";
   import IconCheck from "@lucide/svelte/icons/check";
-  import { theme } from "../../store/theme";
+  import { theme } from "#/store/theme";
   import { resource, watch } from "runed";
 
   interface Props {
@@ -107,7 +107,7 @@
                   style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
                 >
                   {#if showParameterHelp}
-                    {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
+                    {#await import ("#/components/MarkdownText.svelte") then { default: MarkdownText }}
                       <MarkdownText text={source.parameterHelp} />
                     {/await}
                   {/if}
@@ -142,7 +142,7 @@
       <span>Validating...</span>
     </div>
   {:else if error}
-    {#await import ("../../components/MarkdownText.svelte") then { default: MarkdownText }}
+    {#await import ("#/components/MarkdownText.svelte") then { default: MarkdownText }}
       <div role="alert" class="alert alert-error alert-soft">
         <MarkdownText text={error} />
       </div>

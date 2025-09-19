@@ -34,7 +34,7 @@
       {
         name: "sources",
         path: withBaseURL("sources"),
-        component: () => import("./pages/Sources.svelte"),
+        component: () => import("#/pages/Sources/Sources.svelte"),
       },
       {
         name: "jobs",
