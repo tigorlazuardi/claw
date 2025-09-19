@@ -5,20 +5,12 @@
     AvailableSource,
     CreateSourceRequest,
   } from "../../../gen/claw/v1/source_service_pb";
-  import IconX from "@lucide/svelte/icons/x";
   import { getSourceServiceClient } from "../../../connectrpc";
   import SelectSource from "./SelectSource.svelte";
+  import DialogModal from "#/components/DialogModal.svelte";
 
   interface Props {
-    /**
-     * Callback when the modal is requesting to be closed or removed from the DOM.
-     * This will be called when the user clicks the close button, cancel button,
-     * or the server responds with success after form submission.
-     *
-     * This function will not be called if the user clicks outside the modal or press the escape key
-     * to prevent accidental closure.
-     */
-    onCloseRequest: () => void;
+    open: boolean;
   }
 
   let addSourceRequest = $state<M<CreateSourceRequest>>({
@@ -46,7 +38,7 @@
     ].every((f) => f);
   });
 
-  const { onCloseRequest }: Props = $props();
+  let { open = $bindable(false) }: Props = $props();
 
   const createSourceMutation = createMutation({
     mutationKey: ["sources", "create"],
@@ -65,16 +57,17 @@
         queryClient.invalidateQueries({
           queryKey: ["sources", "list"],
         });
-        onCloseRequest();
+        open = false;
       },
     });
   }
 </script>
 
-<div class="modal modal-open">
-  <div class="modal-box xl:w-[60vw] xl:max-w-[60vw]">
-    {@render modalHeader()}
-    <div class="divider"></div>
+<DialogModal bind:open class="w-[90vw] sm:w-[60vw]">
+  {#snippet title()}
+    <span class="font-bold">Add New Source</span>
+  {/snippet}
+  {#snippet description()}
     <form
       class="w-full"
       onsubmit={(e) => {
@@ -123,18 +116,5 @@
         {/await}
       {/if}
     </form>
-  </div>
-</div>
-
-{#snippet modalHeader()}
-  <div id="modal-header" class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl">Add New Source</h2>
-    <button
-      class="btn btn-square btn-ghost"
-      type="button"
-      onclick={onCloseRequest}
-    >
-      <IconX />
-    </button>
-  </div>
-{/snippet}
+  {/snippet}
+</DialogModal>

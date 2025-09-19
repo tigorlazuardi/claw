@@ -77,7 +77,7 @@
     {#await import("#/pages/Sources/AddSource/AddSource.svelte")}
       <LoadingModal />
     {:then { default: AddSourceModal }}
-      <AddSourceModal onCloseRequest={() => (showAddModal = false)} />
+      <AddSourceModal bind:open={showAddModal} />
     {/await}
   {/if}
 </div>

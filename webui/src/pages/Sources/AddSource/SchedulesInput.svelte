@@ -1,11 +1,11 @@
 <script lang="ts">
   import { getSourceServiceClient } from "#/connectrpc";
   import { toDate } from "#/connectrpc/js_date";
-  import { Popover, Combobox } from "bits-ui";
-  import IconInfo from "@lucide/svelte/icons/info";
+  import { Combobox } from "bits-ui";
   import { resource, watch } from "runed";
   import { theme } from "#/store/theme";
   import cronstrue from "cronstrue";
+  import PopoverInfo from "#/components/PopoverInfo.svelte";
 
   interface Props {
     value: string[];
@@ -159,6 +159,7 @@
   <fieldset class="fieldset">
     <legend class="fieldset-legend">
       <span>Schedule</span>
+      {@render helpText()}
     </legend>
     <Combobox.Input
       placeholder="e.g. 0 0 * * FRI ({toPatternOption('0 0 * * FRI').label})"
@@ -192,7 +193,10 @@
         <span>Server Next Run: {nextRunServer}</span>
       </div>
     {:else}
-      <p class="label">Cron expression pattern. Only 5 fields are supported.</p>
+      <p class="label text-wrap">
+        Cron expression pattern. Only standard 5 Cron expression elements are
+        supported.
+      </p>
     {/if}
   </fieldset>
   <Combobox.Portal>
@@ -241,13 +245,52 @@
 </Combobox.Root>
 
 {#snippet helpText()}
-  <Popover.Root>
-    <Popover.Trigger class="btn btn-square btn-ghost btn-xs">
-      <IconInfo />
-    </Popover.Trigger>
-    <Popover.Portal>
-      <Popover.Content class="z-[9999] bg-transparent" data-theme="dracula"
-      ></Popover.Content>
-    </Popover.Portal>
-  </Popover.Root>
+  <PopoverInfo title="Schedule Help">
+    <div class="prose text-wrap">
+      <p>
+        Schedule uses standard 5-element Cron expression format: <span
+          class="font-bold"
+        >
+          * * * * *
+        </span>
+        . Claw does not support non-standard extensions like "year" or "seconds"
+        field.
+      </p>
+      <p>
+        You can use the dropdown when typing to select common cron expression
+        patterns or type your own pattern. The dropdown will filter the options
+        as you type. <span class="font-bold italic">
+          However, this is not an exhaustive list of cron expression patterns.
+          Cron expressions can be very complex and flexible, so the dropdown
+          only provides some common examples.
+        </span>
+        .
+      </p>
+      <p>
+        For more advanced scheduling, you can use Google or other search engine
+        using keywords like <a
+          href="https://www.google.com/search?q=cron+expression+every+3+hours+on+Weekdays&sourceid=chrome&ie=UTF-8"
+          class="font-bold"
+        >
+          cron expression every 3 hours on Weekdays
+        </a>
+        to find the right pattern for your needs.
+      </p>
+      <p>
+        If you leave the field empty, the schedule will be removed and the
+        source will not be scheduled to run automatically.
+      </p>
+      <p>
+        For more information about Cron expression, please visit
+        <a
+          href="https://en.wikipedia.org/wiki/Cron"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Cron - Wikipedia
+        </a>
+        .
+      </p>
+    </div>
+  </PopoverInfo>
 {/snippet}

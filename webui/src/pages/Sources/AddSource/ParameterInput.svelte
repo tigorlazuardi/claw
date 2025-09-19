@@ -3,12 +3,10 @@
     AvailableSource,
     ValidateSourceParametersResponse,
   } from "#/gen/claw/v1/source_service_pb";
-  import { Popover } from "bits-ui";
-  import IconInfo from "@lucide/svelte/icons/info";
   import { getSourceServiceClient } from "#/connectrpc";
   import IconCheck from "@lucide/svelte/icons/check";
-  import { theme } from "#/store/theme";
   import { resource, watch } from "runed";
+  import PopoverInfo from "#/components/PopoverInfo.svelte";
 
   interface Props {
     source: AvailableSource;
@@ -21,7 +19,6 @@
     valid = $bindable(!source.requireParameter),
   }: Props = $props();
   const hasParameterHelp = source.parameterHelp.trim().length > 0;
-  let showParameterHelp = $state(false);
 
   const validateParameter = resource(
     () => ({ source, value }),
@@ -93,30 +90,7 @@
       <span class="text-error">*</span>
     {/if}
     {#if hasParameterHelp}
-      <Popover.Root onOpenChange={(v) => (showParameterHelp = v)}>
-        <Popover.Trigger class="btn btn-square btn-ghost btn-xs" type="button">
-          <IconInfo />
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content class="z-[9999] bg-transparent" data-theme={$theme}>
-            <div class="card bg-base-300 border-base-200 border">
-              <div class="card-body">
-                <div class="card-title">Parameter Help</div>
-                <div
-                  class="p-4 border border-base-100"
-                  style="box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);"
-                >
-                  {#if showParameterHelp}
-                    {#await import ("#/components/MarkdownText.svelte") then { default: MarkdownText }}
-                      <MarkdownText text={source.parameterHelp} />
-                    {/await}
-                  {/if}
-                </div>
-              </div>
-            </div>
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+      <PopoverInfo title="Parameter Help" markdown={source.parameterHelp} />
     {/if}
   </legend>
   <textarea
