@@ -61,6 +61,8 @@
               wgo
               foot
 
+              sqlitestudio
+
               (writeShellScriptBin "dev" ''
                 systemd-run --user --scope --unit=claw-dev ${writeShellScript "dev" ''
                   cd ''${PROJECT_DIR}
