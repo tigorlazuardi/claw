@@ -136,9 +136,11 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 		listener = &NetListener{Listener: ln}
 	}
 
+	corsMiddleware := corsDevMidddlware(cfg.Server.WebUI.DevMode)
+
 	// Create HTTP server with h2c support for HTTP/2 over cleartext
 	httpServer := &http.Server{
-		Handler: stripPrefixHandler(h2c.NewHandler(mux, &http2.Server{})),
+		Handler: corsMiddleware(stripPrefixHandler(h2c.NewHandler(mux, &http2.Server{}))),
 	}
 
 	if err := migrations.Migrate(ctx, db); err != nil {
