@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Sidebar from "./surfaces/Sidebar.svelte";
+  import AppBar from "./components/AppBar.svelte";
   import Routing from "./Routing.svelte";
   import { RouterView } from "@dvcol/svelte-simple-router/components";
   import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
@@ -16,7 +16,7 @@
         data-theme={$theme}
         class="flex h-screen w-screen bg-base-100 text-base-content m-0 p-0"
       >
-        <Sidebar>
+        <AppBar>
           <RouterView>
             {#snippet loading()}
               {#await import("./components/RoutingTransition.svelte") then { default: RoutingTransition }}
@@ -24,7 +24,7 @@
               {/await}
             {/snippet}
           </RouterView>
-        </Sidebar>
+        </AppBar>
       </main>
     </Routing>
   </QueryClientProvider>

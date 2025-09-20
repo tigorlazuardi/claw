@@ -3,7 +3,6 @@
   import { Dialog, type WithoutChild } from "bits-ui";
   import IconX from "@lucide/svelte/icons/x";
   import { theme } from "#/store/theme";
-  import { isMobile } from "#/store/isMobile";
   import type { ClassValue } from "svelte/elements";
 
   type Props = Dialog.RootProps & {
@@ -35,11 +34,11 @@
       {@render trigger()}
     </Dialog.Trigger>
   {/if}
-  <Dialog.Portal to={isMobile ? document.body : "main"}>
+  <Dialog.Portal to="main">
     <Dialog.Overlay class="fixed h-screen w-screen bg-black/40" />
     <Dialog.Content
       {...contentProps}
-      class={"z-[9999] fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-base-200 p-6 rounded-lg shadow-lg" +
+      class={"z-[9999] fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-base-200 p-6 rounded-lg shadow-lg max-h-[80vh] overflow-auto" +
         (className ? " " + className : "")}
       data-theme={$theme}
     >

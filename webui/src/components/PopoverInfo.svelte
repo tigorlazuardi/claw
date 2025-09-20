@@ -40,12 +40,14 @@
   <Popover.Portal>
     <Popover.Content
       {...contentProps}
-      class={"z-[9999] bg-transparent max-w-[90vw] max-h-[60vh]" +
+      class={"z-[9999] bg-transparent max-w-[90vw]" +
         (className ? " " + className : "")}
       data-theme={$theme}
     >
       <Popover.Arrow class="text-primary" />
-      <div class="card bg-base-300 border border-base-200 max-h-[50vh]">
+      <div
+        class="card bg-base-300 border border-base-200 max-h-[50vh] overflow-auto"
+      >
         <div class="card-body">
           <div class="card-title justify-between items-start">
             {#if title}

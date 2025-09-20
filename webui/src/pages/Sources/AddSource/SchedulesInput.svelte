@@ -6,18 +6,22 @@
   import { theme } from "#/store/theme";
   import cronstrue from "cronstrue";
   import PopoverInfo from "#/components/PopoverInfo.svelte";
+  import IconTrash from "@lucide/svelte/icons/trash-2";
+  import { Button } from "bits-ui";
 
   interface Props {
     value: string[];
+    inputValue: string;
   }
 
-  let scheduleInputValue = $state("");
+  let { value = $bindable([]), inputValue = $bindable("") }: Props = $props();
+
   let cronExpressionError = $derived.by(() => {
-    if (!scheduleInputValue.trim()) {
+    if (!inputValue.trim()) {
       return "";
     }
     try {
-      cronstrue.toString(scheduleInputValue, {
+      cronstrue.toString(inputValue, {
         throwExceptionOnParseError: true,
       });
       return "";
@@ -27,7 +31,7 @@
   });
 
   const scheduleInputNextRunResource = resource(
-    () => scheduleInputValue,
+    () => inputValue,
     async (pattern, _, { signal }) => {
       if (!pattern.trim()) {
         return;
@@ -55,8 +59,6 @@
       cronExpression: pattern,
     });
   }
-
-  let { value = $bindable([]) }: Props = $props();
 
   type ScheduleEntry = {
     pattern: string;
@@ -129,7 +131,7 @@
   ].concat(genDropdownDays());
 
   const filteredPatternDropdownList = $derived.by(() => {
-    const text = scheduleInputValue.trim().toLowerCase();
+    const text = inputValue.trim().toLowerCase();
     if (!text) {
       return patternDropdownList;
     }
@@ -146,103 +148,21 @@
   let inputField: HTMLInputElement | null = $state(null);
 
   let isMobile = $state(window.innerWidth < 640);
+
+  function handleAddSchedule() {
+    if (value.includes(inputValue.trim())) {
+      cronExpressionError = "This pattern is already added.";
+      return;
+    }
+    value.push(inputValue.trim());
+    inputValue = "";
+  }
+  function handleOnRemoveSchedule(_: ScheduleEntry, index: number) {
+    value.splice(index, 1);
+  }
 </script>
 
 <svelte:window onresize={() => (isMobile = window.innerWidth < 640)} />
-
-<Combobox.Root
-  type="single"
-  inputValue={scheduleInputValue}
-  onValueChange={(value) => (scheduleInputValue = value.trim())}
-  open={showDropdown}
->
-  <fieldset class="fieldset">
-    <legend class="fieldset-legend">
-      <span>Schedule</span>
-      {@render helpText()}
-    </legend>
-    <Combobox.Input
-      placeholder="e.g. 0 0 * * FRI ({toPatternOption('0 0 * * FRI').label})"
-      oninput={(e) => (scheduleInputValue = e.currentTarget.value)}
-      onfocus={() => (showDropdown = true)}
-      onblur={() => (showDropdown = false)}
-      class="input w-full"
-      bind:ref={inputField}
-    ></Combobox.Input>
-    {#if cronExpressionError}
-      <div class="alert alert-error alert-soft">
-        {cronExpressionError}
-      </div>
-    {:else if scheduleInputNextRunResource.loading}
-      <div class="alert alert-warning alert-soft">
-        <div class="loading loading-spinner"></div>
-        <span>Validating cron exppression...</span>
-      </div>
-    {:else if scheduleInputNextRunResource.current}
-      {@const data = scheduleInputNextRunResource.current}
-      {@const intl = new Intl.DateTimeFormat().resolvedOptions()}
-      {@const ts = toDate(data.nextTime!)}
-      {@const nextRunLocal = ts.toLocaleString()}
-      {@const nextRunServer = ts.toLocaleString(intl.locale, {
-        timeZone: data.zone,
-      })}
-      <div class="alert alert-success alert-soft flex flex-col">
-        <span>
-          Next Run (local time): {nextRunLocal}
-        </span>
-        <span>Server Next Run: {nextRunServer}</span>
-      </div>
-    {:else}
-      <p class="label text-wrap">
-        Cron expression pattern. Only standard 5 Cron expression elements are
-        supported.
-      </p>
-    {/if}
-  </fieldset>
-  <Combobox.Portal>
-    <Combobox.Content
-      data-theme={$theme}
-      class="z-[9999]"
-      side="top"
-      sideOffset={10}
-    >
-      <Combobox.Viewport
-        class="menu bg-base-200 rounded-sm shadow-[0_-0.5rem_1.5rem_rgba(0,0,0,0.1)]"
-        style={{ width: inputField ? `${inputField.offsetWidth}px` : "auto" }}
-      >
-        <div
-          class="flex flex-col overflow-auto"
-          style={`width: ${inputField ? `${inputField.offsetWidth}px` : "auto"}; max-height: ${isMobile ? "12.5rem" : "20rem"}`}
-        >
-          {#each filteredPatternDropdownList as item, i (item.value)}
-            {#if i > 0}
-              <div class="divider py-0 my-0"></div>
-            {/if}
-            <Combobox.Item
-              value={item.value}
-              label={item.value}
-              class="btn btn-ghost flex-col items-start justify-center gap-0 py-8"
-            >
-              <span>{item.value}</span>
-              <span class="font-normal text-left">{item.label}</span>
-            </Combobox.Item>
-          {:else}
-            <Combobox.Item
-              value={scheduleInputValue}
-              label={scheduleInputValue}
-              class="btn btn-ghost flex-col items-start justify-center gap-0 py-8"
-            >
-              <span>{scheduleInputValue}</span>
-              <span class="font-normal text-left">
-                {toPatternOption(scheduleInputValue).label}
-              </span>
-            </Combobox.Item>
-          {/each}
-        </div>
-      </Combobox.Viewport>
-    </Combobox.Content>
-  </Combobox.Portal>
-</Combobox.Root>
 
 {#snippet helpText()}
   <PopoverInfo title="Schedule Help">
@@ -294,3 +214,164 @@
     </div>
   </PopoverInfo>
 {/snippet}
+
+<Combobox.Root
+  type="single"
+  {inputValue}
+  onValueChange={(value) => (inputValue = value.trim())}
+  open={showDropdown}
+>
+  <fieldset class="fieldset w-full">
+    <legend class="fieldset-legend">
+      <span>Schedule</span>
+      {@render helpText()}
+    </legend>
+    <div class="flex gap-2 items-center">
+      <Combobox.Input
+        placeholder="e.g. 0 0 * * FRI ({toPatternOption('0 0 * * FRI').label})"
+        oninput={(e) => (inputValue = e.currentTarget.value)}
+        onfocus={() => (showDropdown = true)}
+        onblur={() => (showDropdown = false)}
+        class="input w-full"
+        bind:ref={inputField}
+      />
+      <button
+        type="button"
+        class="btn btn-primary"
+        disabled={!inputValue || !!cronExpressionError}
+        onclick={handleAddSchedule}
+      >
+        + Add
+      </button>
+    </div>
+    {#if cronExpressionError}
+      <div class="alert alert-error alert-soft">
+        {cronExpressionError}
+      </div>
+    {:else if scheduleInputNextRunResource.loading}
+      <div class="alert alert-warning alert-soft">
+        <div class="loading loading-spinner"></div>
+        <span>Validating cron exppression...</span>
+      </div>
+    {:else if scheduleInputNextRunResource.current}
+      {@const data = scheduleInputNextRunResource.current}
+      {@const intl = new Intl.DateTimeFormat().resolvedOptions()}
+      {@const ts = toDate(data.nextTime!)}
+      {@const nextRunLocal = ts.toLocaleString()}
+      {@const nextRunServer = ts.toLocaleString(intl.locale, {
+        timeZone: data.zone,
+      })}
+      <div class="alert alert-success alert-soft flex flex-col">
+        <span>
+          Next Run (local time): {nextRunLocal}
+        </span>
+        <span>Server Next Run ({data.zone}): {nextRunServer}</span>
+      </div>
+    {:else}
+      <p class="label text-wrap">
+        Schedule to extract images automatically at certain times using Cron
+        expression pattern. Only standard 5 Cron expression elements are
+        supported. Filling this field will enable the "Add" button (if
+        expression is valid), but disables the "Save" button. To re-enable the
+        "Save" button, keep this field empty.
+      </p>
+    {/if}
+    {#await schedules}
+      <div class="alert alert-warning alert-soft">
+        <div class="loading loading-spinner"></div>
+        <span>Validating cron entries...</span>
+      </div>
+    {:then entries}
+      {#if entries.length}
+        <table class="table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Pattern</th>
+              <th>Server Next Run ({entries[0].zone})</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each entries as entry, i (entry.pattern)}
+              <tr>
+                <th>{i + 1}</th>
+                <td>{entry.pattern}</td>
+                {#if entry.error}
+                  <td>
+                    <div class="alert alert-error alert-soft">
+                      {entry.error}
+                    </div>
+                  </td>
+                {:else if entry.nextRun}
+                  {@const intl = new Intl.DateTimeFormat().resolvedOptions()}
+                  {@const ts = entry.nextRun!}
+                  {@const nextRunServer = ts.toLocaleString(intl.locale, {
+                    timeZone: entry.zone,
+                  })}
+                  <td>
+                    {nextRunServer}
+                  </td>
+                {/if}
+                <th>
+                  <Button.Root
+                    onclick={() => handleOnRemoveSchedule(entry, i)}
+                    class="btn w-full"
+                  >
+                    <IconTrash />
+                  </Button.Root>
+                </th>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+    {/await}
+  </fieldset>
+  <Combobox.Portal>
+    <Combobox.Content
+      data-theme={$theme}
+      class="z-[9999]"
+      side="top"
+      sideOffset={10}
+    >
+      <Combobox.Viewport
+        class="menu bg-base-200 rounded-sm"
+        style={{
+          width: inputField ? `${inputField.offsetWidth}px` : "auto",
+          "box-shadow": "0 -0.5rem 1.5rem rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <div
+          class="flex flex-col overflow-auto"
+          style={`width: ${inputField ? `${inputField.offsetWidth}px` : "auto"}; max-height: ${isMobile ? "12.5rem" : "20rem"}`}
+        >
+          {#each filteredPatternDropdownList as item, i (item.value)}
+            {#if i > 0}
+              <div class="divider py-0 my-0"></div>
+            {/if}
+            <Combobox.Item
+              value={item.value}
+              label={item.value}
+              class="btn btn-ghost flex-col items-start justify-center gap-0 py-8"
+            >
+              <span>{item.value}</span>
+              <span class="font-normal text-left">{item.label}</span>
+            </Combobox.Item>
+          {:else}
+            <Combobox.Item
+              value={inputValue}
+              label={inputValue}
+              class="btn btn-ghost flex-col items-start justify-center gap-0 py-8"
+            >
+              <span>{inputValue}</span>
+              <span class="font-normal text-left">
+                {toPatternOption(inputValue).label}
+              </span>
+            </Combobox.Item>
+          {/each}
+        </div>
+      </Combobox.Viewport>
+    </Combobox.Content>
+  </Combobox.Portal>
+</Combobox.Root>

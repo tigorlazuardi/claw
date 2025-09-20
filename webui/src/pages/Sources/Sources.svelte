@@ -64,7 +64,9 @@
   </div>
   <div class="divider"></div>
   {#if listResource.loading}
-    <LoadingModal />
+    <div class="w-full flex justify-center items-center py-16">
+      <div class="loading loading-ring w-[20vw] text-primary"></div>
+    </div>
   {:else if listResource.error}
     {@render error(listResource.error)}
   {:else if listResource.current?.sources.length}

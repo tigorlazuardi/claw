@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createMutation, useQueryClient } from "@tanstack/svelte-query";
+  import type { CreateSourceResponse } from "#/gen/claw/v1/source_service_pb";
   import type { M } from "#/types";
   import type {
     AvailableSource,
@@ -8,9 +9,11 @@
   import { getSourceServiceClient } from "../../../connectrpc";
   import SelectSource from "./SelectSource.svelte";
   import DialogModal from "#/components/DialogModal.svelte";
+  import { resource } from "runed";
 
   interface Props {
     open: boolean;
+    onSourceCreated?: (source: CreateSourceResponse, run?: boolean) => void;
   }
 
   let addSourceRequest = $state<M<CreateSourceRequest>>({
@@ -35,10 +38,22 @@
       selectedSource?.requireParameter && addSourceRequest.parameter,
       addSourceRequest.displayName,
       parameterValid,
+      scheduleInputValue.trim() === "",
     ].every((f) => f);
   });
 
-  let { open = $bindable(false) }: Props = $props();
+  const createSourceResource = resource(
+    () => undefined, // We will trigger this manually. But we want the feature surrounding resource object.
+    async (_, __, { signal }) => {
+      const client = await getSourceServiceClient({ signal });
+      return client.createSource(addSourceRequest);
+    },
+    {
+      lazy: true,
+    },
+  );
+
+  let { open = $bindable(false), onSourceCreated }: Props = $props();
 
   const createSourceMutation = createMutation({
     mutationKey: ["sources", "create"],
@@ -48,33 +63,30 @@
     },
   });
 
-  async function handleOnSubmit() {
+  async function handleOnSubmit(immediate = false) {
     if (!canSubmitForm) {
       return;
     }
-    return $createSourceMutation.mutateAsync(addSourceRequest, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["sources", "list"],
-        });
-        open = false;
-      },
-    });
+    const resp = await createSourceResource.refetch();
+    if (resp) {
+      onSourceCreated?.(resp, immediate);
+      open = false;
+    }
   }
+
+  let scheduleInputValue = $state("");
 </script>
 
-<DialogModal bind:open class="w-[90vw] sm:w-[60vw]">
+<DialogModal
+  contentProps={{ interactOutsideBehavior: "ignore" }}
+  bind:open
+  class="w-[90vw] sm:w-[60vw]"
+>
   {#snippet title()}
     <span class="font-bold">Add New Source</span>
   {/snippet}
   {#snippet description()}
-    <form
-      class="w-full"
-      onsubmit={(e) => {
-        e.preventDefault();
-        handleOnSubmit();
-      }}
-    >
+    <form class="w-full">
       <SelectSource
         bind:selected={selectedSource}
         bind:valid={nameValid}
@@ -98,18 +110,21 @@
           />
         {/await}
         {#await import("./SchedulesInput.svelte") then { default: SchedulesInput }}
-          <SchedulesInput bind:value={addSourceRequest.schedules} />
+          <SchedulesInput
+            bind:value={addSourceRequest.schedules}
+            bind:inputValue={scheduleInputValue}
+          />
         {/await}
         {#await import("./Actions.svelte") then { default: Actions }}
           <Actions
             onclick={(evt, immediate) => {
               // TODO: Handle immediate run after creation
               evt.preventDefault();
-              handleOnSubmit();
+              handleOnSubmit(immediate);
             }}
             oncancel={(evt) => {
               evt.preventDefault();
-              onCloseRequest();
+              open = false;
             }}
             disabled={!canSubmitForm || $createSourceMutation.isPending}
           />

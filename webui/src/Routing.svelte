@@ -9,10 +9,17 @@
   import type { RouterOptions } from "@dvcol/svelte-simple-router/models";
 
   import { RouterContext } from "@dvcol/svelte-simple-router/components";
+  import type { Snippet } from "svelte";
 
   function withBaseURL(path: string) {
     return (import.meta.env.BASE_URL || "/") + path;
   }
+
+  interface Props {
+    children: Snippet;
+  }
+
+  const { children }: Props = $props();
 
   const options: RouterOptions = {
     routes: [
@@ -54,5 +61,5 @@
 </script>
 
 <RouterContext {options}>
-  <slot />
+  {@render children()}
 </RouterContext>
