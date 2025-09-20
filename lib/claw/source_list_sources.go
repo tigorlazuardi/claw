@@ -65,12 +65,16 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 		limit = Clamp(req.Pagination.GetSize(), 1, 100)
 	}
 
-	var from ReadableTable = Sources
+	var (
+		from         ReadableTable = Sources
+		extraColumns []Projection
+	)
 	if req.GetIncludeSchedules() {
+		extraColumns = append(extraColumns, Schedules.AllColumns)
 		from = Sources.LEFT_JOIN(Schedules, Sources.ID.EQ(Schedules.SourceID))
 	}
 
-	query := SELECT(Sources.AllColumns).
+	query := SELECT(Sources.AllColumns, extraColumns...).
 		FROM(from).
 		WHERE(cond).
 		ORDER_BY(sorts...).
