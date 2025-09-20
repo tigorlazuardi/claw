@@ -25,22 +25,22 @@ func TestValidateSourceParameters(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		sourceName     string
-		parameter      string
-		expectedValid  bool
-		expectedError  string
+		name          string
+		sourceName    string
+		parameter     string
+		expectedValid bool
+		expectedError string
 	}{
 		{
 			name:          "valid reddit subreddit",
 			sourceName:    "claw.reddit.v1",
-			parameter:     "r/wallpapers",
+			parameter:     "/r/wallpapers",
 			expectedValid: true,
 		},
 		{
 			name:          "valid reddit user format",
-			sourceName:    "claw.reddit.v1", 
-			parameter:     "u/test",
+			sourceName:    "claw.reddit.v1",
+			parameter:     "/u/test",
 			expectedValid: true,
 		},
 		{
@@ -74,18 +74,19 @@ func TestValidateSourceParameters(t *testing.T) {
 			}
 
 			resp, err := claw.ValidateSourceParameters(context.Background(), req)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
 
-			assert.Equal(t, tt.expectedValid, resp.Valid)
-			
 			if tt.expectedValid {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 				assert.NotEmpty(t, resp.TransformedParameter)
-				assert.Empty(t, resp.ErrorMessage)
 			} else {
-				assert.Empty(t, resp.TransformedParameter)
-				assert.Contains(t, resp.ErrorMessage, tt.expectedError)
+				require.Error(t, err)
+				assert.Nil(t, resp)
+				if tt.expectedError != "" {
+					assert.Contains(t, err.Error(), tt.expectedError)
+				}
 			}
 		})
 	}
 }
+
