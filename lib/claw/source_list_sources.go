@@ -97,13 +97,18 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 		}, nil
 	}
 
-	// Check if there are more results and set next page token
-	var nextPageToken, prevPageToken uint32
+	pagination := &clawv1.Pagination{
+		Size: &limit,
+	}
 
 	if len(rows) >= int(limit) {
-		firstRow, lastRow := rows[0], rows[len(rows)-1]
-		nextPageToken = uint32(*lastRow.ID)
-		prevPageToken = uint32(*firstRow.ID)
+		lastRow := rows[len(rows)-1]
+		pagination.NextToken = Ptr(uint32(*lastRow.ID))
+	}
+
+	if req.Pagination != nil && req.Pagination.GetPrevToken() > 0 { // Not first page
+		firstRow := rows[0]
+		pagination.PrevToken = Ptr(uint32(*firstRow.ID))
 	}
 	// Convert to protobuf
 	sources := make([]*clawv1.Source, 0, len(rows))
@@ -130,12 +135,8 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 	}
 
 	response := &clawv1.ListSourcesResponse{
-		Sources: sources,
-		Pagination: &clawv1.Pagination{
-			Size:      &limit,
-			NextToken: &nextPageToken,
-			PrevToken: &prevPageToken,
-		},
+		Sources:    sources,
+		Pagination: pagination,
 	}
 
 	return response, nil

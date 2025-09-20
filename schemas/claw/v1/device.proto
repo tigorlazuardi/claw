@@ -9,13 +9,13 @@ import "google/protobuf/timestamp.proto";
 enum NSFWMode {
   // Unspecified NSFW mode
   NSFW_MODE_UNSPECIFIED = 0;
-  
+
   // Allow NSFW content
   NSFW_MODE_ALLOW = 1;
-  
+
   // Disallow NSFW content
   NSFW_MODE_DISALLOW = 2;
-  
+
   // Only allow NSFW content
   NSFW_MODE_ONLY = 3;
 }
@@ -73,7 +73,9 @@ message Device {
   // Timestamp when device was last updated
   google.protobuf.Timestamp updated_at = 17;
 
+  // Timestamp when device was last active (e.g., last image assignment)
+  google.protobuf.Timestamp last_active_at = 19;
+
   // List of source IDs this device is subscribed to
   repeated int64 subscriptions = 18;
 }
-

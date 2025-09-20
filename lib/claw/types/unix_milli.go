@@ -91,7 +91,10 @@ func (u UnixMilli) UnixMilli() int64 {
 }
 
 // ToProto converts UnixMilli to protobuf timestamp
-func (u UnixMilli) ToProto() *timestamppb.Timestamp {
+func (u *UnixMilli) ToProto() *timestamppb.Timestamp {
+	if u == nil {
+		return nil
+	}
 	if u.Time.IsZero() {
 		return nil
 	}

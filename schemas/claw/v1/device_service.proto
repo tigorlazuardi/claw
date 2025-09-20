@@ -4,6 +4,21 @@ package claw.v1;
 
 import "buf/validate/validate.proto";
 import "claw/v1/device.proto";
+import "claw/v1/pagination.proto";
+
+// DeviceSortField defines the fields that can be used for sorting devices
+enum DeviceSortField {
+  DEVICE_SORT_FIELD_UNSPECIFIED = 0;
+  DEVICE_SORT_FIELD_ID = 1;
+  DEVICE_SORT_FIELD_SLUG = 2;
+  DEVICE_SORT_FIELD_NAME = 3;
+  DEVICE_SORT_FIELD_HEIGHT = 4;
+  DEVICE_SORT_FIELD_WIDTH = 5;
+  DEVICE_SORT_FIELD_ASPECT_RATIO_DIFFERENCE = 6;
+  DEVICE_SORT_FIELD_NSFW = 7;
+  DEVICE_SORT_FIELD_CREATED_AT = 8;
+  DEVICE_SORT_FIELD_UPDATED_AT = 9;
+}
 
 // DeviceService provides CRUD operations for devices
 service DeviceService {
@@ -196,29 +211,49 @@ message DeleteDeviceResponse {
 
 // List devices request
 message ListDevicesRequest {
-  // Search term to filter devices by slug or name
-  optional string search = 1;
+  // Optional filter by slug
+  optional string slug = 1;
 
-  // Page size for pagination. Default is 20, max is 100.
-  optional int32 page_size = 2 [(buf.validate.field).int32 = {
-    gte: 1
-    lte: 100
-  }];
+  // Search term to filter devices by id, slug, or name
+  optional string search = 2;
 
-  // Page token for pagination
-  optional uint32 page_token = 3;
+  optional bool count_images = 3;
+
+  // Optional filter by source ID. If set, only devices subscribed to the given
+  // source ID will be returned.
+  optional uint32 source_id = 4;
+
+  message Sort {
+    // Field to sort by
+    DeviceSortField field = 1 [(buf.validate.field).enum.defined_only = true];
+    // Whether to sort in descending order
+    bool desc = 2;
+  }
+
+  // Fields to sort by.
+  repeated Sort sorts = 99;
+
+  // Pagination parameters. Use the same sort fields
+  // and then set this to previous response's pagination
+  // to get the next page or previous page of results.
+  //
+  // Changing sort fields while paginating may lead to
+  // unexpected results.
+  //
+  // If user changes sort fields, client should reset
+  // by using empty tokens.
+  optional Pagination pagination = 100;
 }
 
 // List devices response
 message ListDevicesResponse {
+  message Item {
+    Device device = 1;
+    optional int64 image_count = 2;
+  }
   // List of devices
-  repeated Device devices = 1;
-
-  // Next page token for pagination
-  optional uint32 next_page_token = 2;
-
-  // Total count of devices (optional)
-  optional int64 total_count = 3;
+  repeated Item items = 1;
+  Pagination pagination = 2;
 }
 
 // List dropdown devices request

@@ -258,7 +258,7 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 
 func (scheduler *scheduler) findDevicesToAssign(ctx context.Context, image source.Image) ([]model.Devices, error) {
 	imageRatio := float64(image.Width) / float64(image.Height)
-	cond := Devices.IsEnabled.EQ(Int(1)).
+	cond := Devices.IsDisabled.EQ(Int(0)).
 		AND(
 			Float(imageRatio).BETWEEN(
 				CAST(Devices.Width).AS_REAL().DIV(CAST(Devices.Width).AS_REAL()).SUB(Devices.AspectRatioDifference),
