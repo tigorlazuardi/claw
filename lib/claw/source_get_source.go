@@ -10,7 +10,6 @@ import (
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
 	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetSource retrieves a source by ID
@@ -34,19 +33,13 @@ func (s *Claw) GetSource(ctx context.Context, req *clawv1.GetSourceRequest) (*cl
 		return nil, fmt.Errorf("failed to get source: %w", err)
 	}
 
-	// Convert to protobuf
-	var lastRunAt *timestamppb.Timestamp
-	if sourceRow.LastRunAt != nil {
-		lastRunAt = sourceRow.LastRunAt.ToProto()
-	}
-
 	source := &clawv1.Source{
 		Name:        sourceRow.Name,
 		DisplayName: sourceRow.DisplayName,
 		Parameter:   sourceRow.Parameter,
 		Countback:   int32(sourceRow.Countback),
 		IsDisabled:  bool(sourceRow.IsDisabled),
-		LastRunAt:   lastRunAt,
+		LastRunAt:   sourceRow.LastRunAt.ToProto(),
 		CreatedAt:   sourceRow.CreatedAt.ToProto(),
 		UpdatedAt:   sourceRow.UpdatedAt.ToProto(),
 	}

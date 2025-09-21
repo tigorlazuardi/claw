@@ -8,99 +8,53 @@ import (
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
 	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
-	"github.com/tigorlazuardi/claw/lib/claw/types"
 )
 
 // GetImage retrieves an image by ID with all related data
 func (s *Claw) GetImage(ctx context.Context, req *clawv1.GetImageRequest) (*clawv1.GetImageResponse, error) {
-	// Get image
-	stmt := SELECT(Images.AllColumns).
-		FROM(Images).
+	stmt := SELECT(
+		Images.AllColumns,
+		Tags.AllColumns,
+		ImageDevices.AllColumns.As("assignments.image_devices"),
+		Devices.AllColumns.As("assignments.devices"),
+		Sources.AllColumns,
+	).
+		FROM(
+			Images.INNER_JOIN(ImageTags, ImageTags.ImageID.EQ(Int64(req.Id))).
+				INNER_JOIN(Tags, Tags.ID.EQ(ImageTags.TagID)).
+				INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Int64(req.Id))).
+				INNER_JOIN(Devices, Devices.ID.EQ(ImageDevices.DeviceID)).
+				INNER_JOIN(Sources, Sources.ID.EQ(Images.SourceID)),
+		).
 		WHERE(Images.ID.EQ(Int64(req.Id)))
 
-	var imageRow model.Images
-	err := stmt.QueryContext(ctx, s.db, &imageRow)
+	var row struct {
+		model.Images
+		Tags        []model.Tags
+		Assignments []struct {
+			ImageDevices model.ImageDevices
+			Devices      model.Devices
+		}
+		Sources model.Sources
+	}
+
+	err := stmt.QueryContext(ctx, s.db, &row)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image: %w", err)
 	}
 
-	// Get device assignments
-	deviceStmt := SELECT(ImageDevices.DeviceID).
-		FROM(ImageDevices).
-		WHERE(ImageDevices.ImageID.EQ(Int64(req.Id)))
-
-	var deviceRows []model.ImageDevices
-	err = deviceStmt.QueryContext(ctx, s.db, &deviceRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image devices: %w", err)
+	assignments := make([]*clawv1.GetImageResponse_Assignment, 0, len(row.Assignments))
+	for _, assign := range row.Assignments {
+		assignments = append(assignments, &clawv1.GetImageResponse_Assignment{
+			Path:   assign.ImageDevices.Path,
+			Device: deviceModelToProto(assign.Devices),
+		})
 	}
-
-	var deviceIDs []int64
-	for _, device := range deviceRows {
-		deviceIDs = append(deviceIDs, device.DeviceID)
-	}
-
-	// Get file paths
-	pathStmt := SELECT(ImagePaths.Path).
-		FROM(ImagePaths).
-		WHERE(ImagePaths.ImageID.EQ(Int64(req.Id)))
-
-	var pathRows []model.ImagePaths
-	err = pathStmt.QueryContext(ctx, s.db, &pathRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image paths: %w", err)
-	}
-
-	var paths []string
-	for _, path := range pathRows {
-		paths = append(paths, path.Path)
-	}
-
-	// Get tags
-	tagStmt := SELECT(ImageTags.Tag).
-		FROM(ImageTags).
-		WHERE(ImageTags.ImageID.EQ(Int64(req.Id)))
-
-	var tagRows []model.ImageTags
-	err = tagStmt.QueryContext(ctx, s.db, &tagRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image tags: %w", err)
-	}
-
-	var tags []string
-	for _, tag := range tagRows {
-		tags = append(tags, tag.Tag)
-	}
-
-	// Convert to protobuf
-	image := s.imageModelToProto(imageRow, deviceIDs, paths, tags)
 
 	return &clawv1.GetImageResponse{
-		Image: image,
+		Image:       imageModelToProto(row.Images),
+		Tags:        tagModelsToProto(row.Tags),
+		Assignments: assignments,
+		Source:      sourceModelToProto(row.Sources),
 	}, nil
 }
-
-// imageModelToProto converts a database image model to protobuf
-func (s *Claw) imageModelToProto(imageRow model.Images, deviceIDs []int64, paths []string, tags []string) *clawv1.Image {
-	return &clawv1.Image{
-		Id:            *imageRow.ID,
-		SourceId:      imageRow.SourceID,
-		DeviceIds:     deviceIDs,
-		Paths:         paths,
-		DownloadUrl:   imageRow.DownloadURL,
-		Width:         int32(imageRow.Width),
-		Height:        int32(imageRow.Height),
-		Filesize:      uint32(imageRow.Filesize),
-		ThumbnailPath: &imageRow.ThumbnailPath,
-		ImagePath:     imageRow.ImagePath,
-		Title:         &imageRow.Title,
-		PostAuthor:    &imageRow.PostAuthor,
-		PostAuthorUrl: &imageRow.PostAuthorURL,
-		PostUrl:       &imageRow.PostURL,
-		IsFavorite:    bool(types.Bool(imageRow.IsFavorite)),
-		Tags:          tags,
-		CreatedAt:     imageRow.CreatedAt.ToProto(),
-		UpdatedAt:     imageRow.UpdatedAt.ToProto(),
-	}
-}
-

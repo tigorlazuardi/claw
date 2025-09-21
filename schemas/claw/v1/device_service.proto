@@ -4,7 +4,9 @@ package claw.v1;
 
 import "buf/validate/validate.proto";
 import "claw/v1/device.proto";
+import "claw/v1/nsfw.proto";
 import "claw/v1/pagination.proto";
+import "claw/v1/source.proto";
 
 // DeviceSortField defines the fields that can be used for sorting devices
 enum DeviceSortField {
@@ -49,11 +51,11 @@ service DeviceService {
 
 // Create device request
 message CreateDeviceRequest {
-  // Slug identifier for the device
+  // url and filesystem friendly name. required.
   string slug = 1 [(buf.validate.field).string.min_len = 1];
 
   // Display name for the device (optional)
-  optional string name = 2;
+  string name = 2 [(buf.validate.field).string.min_len = 1];
 
   // Device screen height in pixels
   int32 height = 3 [(buf.validate.field).int32.gt = 0];
@@ -78,11 +80,6 @@ message CreateDeviceRequest {
   // close enough that "stretching" or "fill" scaling modes will not distort
   // or crop the image too much. A value of 0.2 is a good starting point for most devices.
   double aspect_ratio_difference = 5 [(buf.validate.field).double.gte = 0];
-
-  // Directory where images for this device are saved
-  //
-  // If null or empty, the default save directory will be used.
-  optional string save_dir = 6;
 
   // Template for filename generation (optional). Can use Go template syntax.
   //
@@ -122,16 +119,21 @@ message CreateDeviceRequest {
   optional uint32 image_max_filesize = 13;
 
   // NSFW content handling mode
-  NSFWMode nsfw = 14;
+  NSFWMode nsfw = 14 [(buf.validate.field).enum.defined_only = true];
+
+  // Whether the device is disabled. Disabled devices will not be assigned new images.
+  optional bool is_disabled = 15;
 
   // List of source IDs to automatically subscribe this device to
-  repeated int64 subscriptions = 15;
+  repeated int64 sources = 100;
 }
 
 // Create device response
 message CreateDeviceResponse {
   // The created device
   Device device = 1;
+
+  repeated int64 sources = 2;
 }
 
 // Get device request
@@ -144,12 +146,15 @@ message GetDeviceRequest {
 message GetDeviceResponse {
   // The requested device
   Device device = 1;
+
+  int32 image_count = 2;
+
+  repeated Source sources = 3;
 }
 
 // Update device request
 message UpdateDeviceRequest {
-  // Updated slug (optional)
-  string slug = 2 [(buf.validate.field).string.min_len = 1];
+  int32 id = 1;
 
   // Updated display name (optional)
   optional string name = 3;
@@ -162,9 +167,6 @@ message UpdateDeviceRequest {
 
   // Updated acceptable aspect ratio difference (optional)
   optional double aspect_ratio_difference = 6;
-
-  // Updated save directory (optional)
-  optional string save_dir = 7;
 
   // Updated filename template (optional)
   optional string filename_template = 8;
@@ -200,14 +202,11 @@ message UpdateDeviceResponse {
 // Delete device request
 message DeleteDeviceRequest {
   // Device Slugs to delete.
-  repeated string slugs = 1;
+  repeated int32 ids = 1;
 }
 
 // Delete device response
-message DeleteDeviceResponse {
-  // Whether the deletion was successful
-  bool success = 1;
-}
+message DeleteDeviceResponse {}
 
 // List devices request
 message ListDevicesRequest {
@@ -222,6 +221,15 @@ message ListDevicesRequest {
   // Optional filter by source ID. If set, only devices subscribed to the given
   // source ID will be returned.
   optional uint32 source_id = 4;
+
+  message LastImage {
+    // Whether to include the last assigned image for each device
+    optional bool include = 1;
+    // If set, only include last image if it matches the given NSFW mode
+    optional NSFWMode nsfw = 2;
+  }
+
+  optional LastImage last_image = 5;
 
   message Sort {
     // Field to sort by
@@ -261,19 +269,14 @@ message ListDropDownDevicesRequest {
   // Empty message
 }
 
-// Device dropdown option containing slug and optional name
-message DeviceDropDownOption {
-  // Device slug
-  string slug = 1;
-
-  // Device display name, null if not set by user.
-  optional string name = 2;
-}
-
 // List dropdown devices response
 message ListDropDownDevicesResponse {
+  message Item {
+    int32 id = 1;
+    string name = 2;
+  }
   // List of device dropdown options
-  repeated DeviceDropDownOption devices = 1;
+  repeated Item items = 1;
 }
 
 // Subscribe device request
@@ -285,11 +288,7 @@ message SubscribeDeviceRequest {
   repeated int64 source_ids = 2 [(buf.validate.field).repeated.min_items = 1];
 }
 
-// Subscribe device response
-message SubscribeDeviceResponse {
-  // The updated device with new subscriptions
-  Device device = 1;
-}
+message SubscribeDeviceResponse {}
 
 // Unsubscribe device request
 message UnsubscribeDeviceRequest {

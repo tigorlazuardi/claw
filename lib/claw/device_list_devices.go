@@ -72,14 +72,33 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		extraColumns []Projection
 		groupBy      GroupByClause
 	)
+	imageDevicesJoined := false
 	if req.GetCountImages() {
+		imageDevicesJoined = true
 		from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
-		extraColumns = append(extraColumns, COUNT(ImageDevices.ID).AS("image_count"))
+		extraColumns = append(extraColumns, COUNT(ImageDevices.ImageID).AS("image_count"))
 		groupBy = Devices.ID
 	}
 	if sourceID := req.GetSourceId(); sourceID != 0 {
 		from = from.INNER_JOIN(DeviceSources, DeviceSources.DeviceID.EQ(Devices.ID))
 		cond = cond.AND(DeviceSources.SourceID.EQ(Int64(int64(sourceID))))
+	}
+	if lastImage := req.GetLastImage(); lastImage != nil && lastImage.GetInclude() {
+		nsfw := lastImage.GetNsfw()
+		extraColumns = append(extraColumns, Images.AllColumns.As("last_image"))
+		if nsfw == clawv1.NSFWMode_NSFW_MODE_DISALLOW || nsfw == clawv1.NSFWMode_NSFW_MODE_ONLY {
+			if !imageDevicesJoined {
+				from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
+				imageDevicesJoined = true
+			}
+			from = from.INNER_JOIN(Images, Images.ID.EQ(ImageDevices.ImageID))
+			if nsfw == clawv1.NSFWMode_NSFW_MODE_DISALLOW {
+				cond = cond.AND(Images.IsNsfw.EQ(Int(0)))
+			}
+			if nsfw == clawv1.NSFWMode_NSFW_MODE_ONLY {
+				cond = cond.AND(Images.IsNsfw.EQ(Int(1)))
+			}
+		}
 	}
 	stmt := SELECT(Devices.AllColumns, extraColumns...).
 		FROM(from).
@@ -93,6 +112,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 	var rows []struct {
 		model.Devices
 		ImageCount *int64
+		LastImage  *model.Images
 	}
 	err := stmt.QueryContext(ctx, s.db, &rows)
 	if err != nil {
@@ -125,8 +145,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		item := &clawv1.ListDevicesResponse_Item{
 			Device: &clawv1.Device{
 				Id:                    int64(*row.ID),
-				Name:                  Ptr(row.Name),
-				Slug:                  row.Slug,
+				Name:                  row.Name,
 				Width:                 int32(row.Width),
 				Height:                int32(row.Height),
 				AspectRatioDifference: row.AspectRatioDifference,

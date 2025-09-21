@@ -11,10 +11,8 @@ import (
 
 // DeleteDevice deletes devices by their slugs
 func (s *Claw) DeleteDevice(ctx context.Context, req *clawv1.DeleteDeviceRequest) (*clawv1.DeleteDeviceResponse, error) {
-	if len(req.Slugs) == 0 {
-		return &clawv1.DeleteDeviceResponse{
-			Success: true,
-		}, nil
+	if len(req.Ids) == 0 {
+		return &clawv1.DeleteDeviceResponse{}, nil
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -24,13 +22,13 @@ func (s *Claw) DeleteDevice(ctx context.Context, req *clawv1.DeleteDeviceRequest
 	defer tx.Rollback()
 
 	// Convert slugs to sqlite expressions
-	var slugExprs []sqlite.Expression
-	for _, slug := range req.Slugs {
-		slugExprs = append(slugExprs, sqlite.String(slug))
+	var idExpr []sqlite.Expression
+	for _, id := range req.Ids {
+		idExpr = append(idExpr, sqlite.Int(int64(id)))
 	}
 
 	// Delete devices by slugs
-	deleteStmt := Devices.DELETE().WHERE(Devices.Slug.IN(slugExprs...))
+	deleteStmt := Devices.DELETE().WHERE(Devices.ID.IN(idExpr...))
 
 	_, err = deleteStmt.ExecContext(ctx, tx)
 	if err != nil {
@@ -41,7 +39,5 @@ func (s *Claw) DeleteDevice(ctx context.Context, req *clawv1.DeleteDeviceRequest
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &clawv1.DeleteDeviceResponse{
-		Success: true,
-	}, nil
+	return &clawv1.DeleteDeviceResponse{}, nil
 }

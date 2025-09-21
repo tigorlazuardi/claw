@@ -3,33 +3,19 @@ syntax = "proto3";
 package claw.v1;
 
 import "buf/validate/validate.proto";
+import "claw/v1/nsfw.proto";
 import "google/protobuf/timestamp.proto";
-
-// NSFWMode defines how NSFW content should be handled for a device
-enum NSFWMode {
-  // Unspecified NSFW mode
-  NSFW_MODE_UNSPECIFIED = 0;
-
-  // Allow NSFW content
-  NSFW_MODE_ALLOW = 1;
-
-  // Disallow NSFW content
-  NSFW_MODE_DISALLOW = 2;
-
-  // Only allow NSFW content
-  NSFW_MODE_ONLY = 3;
-}
 
 // Device represents a target device for image assignment
 message Device {
-  // Unique identifier for the device
+  // Unique identifier for the device. This field is ignored during creation.
   int64 id = 1;
 
-  // Slug identifier for the device
-  string slug = 2 [(buf.validate.field).string.min_len = 1];
+  // url friendly
+  string slug = 2;
 
-  // Display name for the device (optional)
-  optional string name = 3;
+  // Display name for the device.
+  string name = 3 [(buf.validate.field).string.min_len = 1];
 
   // Device screen height in pixels
   int32 height = 4 [(buf.validate.field).int32.gt = 0];
@@ -39,9 +25,6 @@ message Device {
 
   // Acceptable aspect ratio difference as float
   double aspect_ratio_difference = 6 [(buf.validate.field).double.gte = 0];
-
-  // Directory where images for this device are saved
-  string save_dir = 7 [(buf.validate.field).string.min_len = 1];
 
   // Template for filename generation (optional)
   optional string filename_template = 8;
@@ -67,15 +50,12 @@ message Device {
   // NSFW content handling mode
   NSFWMode nsfw = 15;
 
-  // Timestamp when device was created
+  // Timestamp when device was created. This field is ignored during creation.
   google.protobuf.Timestamp created_at = 16;
 
-  // Timestamp when device was last updated
+  // Timestamp when device was last updated. This field is ignored during creation.
   google.protobuf.Timestamp updated_at = 17;
 
-  // Timestamp when device was last active (e.g., last image assignment)
+  // Timestamp when device was last active (e.g., last image assignment). This field is ignored during creation.
   google.protobuf.Timestamp last_active_at = 19;
-
-  // List of source IDs this device is subscribed to
-  repeated int64 subscriptions = 18;
 }

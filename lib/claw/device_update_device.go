@@ -27,9 +27,6 @@ func (s *Claw) UpdateDevice(ctx context.Context, req *clawv1.UpdateDeviceRequest
 	if req.Height != nil {
 		columns = append(columns, Devices.Height)
 	}
-	if req.SaveDir != nil {
-		columns = append(columns, Devices.SaveDir)
-	}
 	if req.Width != nil {
 		columns = append(columns, Devices.Width)
 	}
@@ -63,11 +60,9 @@ func (s *Claw) UpdateDevice(ctx context.Context, req *clawv1.UpdateDeviceRequest
 
 	var out model.Devices
 	err = Devices.UPDATE(ColumnList(columns)).MODEL(model.Devices{
-		ID:                    new(int64),
 		Name:                  Deref(req.Name),
 		Width:                 int64(Deref(req.Width)),
 		Height:                int64(Deref(req.Height)),
-		SaveDir:               Deref(req.SaveDir),
 		FilenameTemplate:      Deref(req.FilenameTemplate),
 		ImageMaxWidth:         int64(Deref(req.ImageMaxWidth)),
 		ImageMinHeight:        int64(Deref(req.ImageMinHeight)),
@@ -79,39 +74,20 @@ func (s *Claw) UpdateDevice(ctx context.Context, req *clawv1.UpdateDeviceRequest
 		ImageMinWidth:         int64(Deref(req.ImageMinWidth)),
 		UpdatedAt:             types.UnixMilliNow(),
 	}).
-		WHERE(Devices.Slug.EQ(sqlite.String(req.Slug))).
+		WHERE(Devices.ID.EQ(sqlite.Int(int64(req.Id)))).
 		RETURNING(Devices.AllColumns).
 		QueryContext(ctx, s.db, &out)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update device: %w", err)
 	}
 
-	// Get device subscriptions
-	subscriptionStmt := SELECT(DeviceSources.SourceID).
-		FROM(DeviceSources).
-		WHERE(DeviceSources.DeviceID.EQ(Int64(*out.ID)))
-
-	var subscriptionRows []model.DeviceSources
-	err = subscriptionStmt.QueryContext(ctx, s.db, &subscriptionRows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get device subscriptions: %w", err)
-	}
-
-	// Convert subscriptions to slice of int64
-	var subscriptions []int64
-	for _, sub := range subscriptionRows {
-		subscriptions = append(subscriptions, sub.SourceID)
-	}
-
 	// Convert to protobuf
 	device := &clawv1.Device{
 		Id:                    *out.ID,
-		Slug:                  out.Slug,
-		Name:                  &out.Name,
+		Name:                  out.Name,
 		Height:                int32(out.Height),
 		Width:                 int32(out.Width),
 		AspectRatioDifference: out.AspectRatioDifference,
-		SaveDir:               out.SaveDir,
 		FilenameTemplate:      &out.FilenameTemplate,
 		ImageMinHeight:        uint32(out.ImageMinHeight),
 		ImageMinWidth:         uint32(out.ImageMinWidth),

@@ -71,12 +71,10 @@ func (s *Claw) UnsubscribeDevice(ctx context.Context, req *clawv1.UnsubscribeDev
 	// Convert to protobuf
 	device := &clawv1.Device{
 		Id:                    *deviceRow.ID,
-		Slug:                  deviceRow.Slug,
-		Name:                  &deviceRow.Name,
+		Name:                  deviceRow.Name,
 		Height:                int32(deviceRow.Height),
 		Width:                 int32(deviceRow.Width),
 		AspectRatioDifference: deviceRow.AspectRatioDifference,
-		SaveDir:               deviceRow.SaveDir,
 		FilenameTemplate:      &deviceRow.FilenameTemplate,
 		ImageMinHeight:        uint32(deviceRow.ImageMinHeight),
 		ImageMinWidth:         uint32(deviceRow.ImageMinWidth),
@@ -87,11 +85,10 @@ func (s *Claw) UnsubscribeDevice(ctx context.Context, req *clawv1.UnsubscribeDev
 		Nsfw:                  clawv1.NSFWMode(deviceRow.NsfwMode),
 		CreatedAt:             deviceRow.CreatedAt.ToProto(),
 		UpdatedAt:             deviceRow.UpdatedAt.ToProto(),
-		Subscriptions:         subscriptions,
+		LastActiveAt:          deviceRow.LastActiveAt.ToProto(),
 	}
 
 	return &clawv1.UnsubscribeDeviceResponse{
 		Device: device,
 	}, nil
 }
-

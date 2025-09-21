@@ -13,59 +13,44 @@ CREATE TABLE IF NOT EXISTS images (
     post_author_url TEXT NOT NULL DEFAULT '',
     post_url TEXT NOT NULL DEFAULT '',
     is_favorite INTEGER NOT NULL DEFAULT 0, -- 0=false, 1=true
+    is_nsfw INTEGER NOT NULL DEFAULT 0, -- 0=false, 1=true
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     FOREIGN KEY (source_id) REFERENCES sources(id) ON DELETE CASCADE
 );
 
--- Junction table for image-device many-to-many relationship
-CREATE TABLE IF NOT EXISTS image_devices (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    image_id INTEGER NOT NULL,
-    device_id INTEGER NOT NULL,
-    created_at INTEGER NOT NULL,
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
-    UNIQUE(image_id, device_id)
-);
-
--- Table for image file paths (hardlinks/copies)
-CREATE TABLE IF NOT EXISTS image_paths (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    image_id INTEGER NOT NULL,
-    path TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
-);
-
--- Table for image tags
-CREATE TABLE IF NOT EXISTS image_tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    image_id INTEGER NOT NULL,
-    tag TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-    UNIQUE(image_id, tag)
-);
-
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_images_source_id ON images(source_id);
-CREATE INDEX IF NOT EXISTS idx_images_download_url ON images(download_url);
 CREATE INDEX IF NOT EXISTS idx_images_is_favorite ON images(is_favorite);
 CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
 CREATE INDEX IF NOT EXISTS idx_images_updated_at ON images(updated_at);
 
-CREATE INDEX IF NOT EXISTS idx_image_devices_image_id ON image_devices(image_id);
-CREATE INDEX IF NOT EXISTS idx_image_devices_device_id ON image_devices(device_id);
+-- Junction table for image-device many-to-many relationship
+-- and contain path to the image on that device.
+CREATE TABLE IF NOT EXISTS image_devices (
+    image_id INTEGER NOT NULL,
+    device_id INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    PRIMARY KEY (image_id, device_id),
+    UNIQUE(path)
+);
 
-CREATE INDEX IF NOT EXISTS idx_image_paths_image_id ON image_paths(image_id);
-CREATE INDEX IF NOT EXISTS idx_image_paths_path ON image_paths(path);
+CREATE INDEX IF NOT EXISTS idx_image_devices_device_id_image_id ON image_devices(device_id, image_id); -- reverse composite index if needed to search by device_id first.
 
-CREATE INDEX IF NOT EXISTS idx_image_tags_image_id ON image_tags(image_id);
-CREATE INDEX IF NOT EXISTS idx_image_tags_tag ON image_tags(tag);
+-- +goose StatementBegin
+CREATE TRIGGER IF NOT EXISTS trg_image_devices_on_insert_update_device_last_active
+AFTER INSERT ON image_devices
+FOR EACH ROW
+BEGIN
+  UPDATE devices 
+  SET last_active_at = unixepoch('now', 'subsec') * 1000
+  WHERE id = NEW.device_id;
+END;
+-- +goose StatementEnd
 
 -- +goose Down
-DROP TABLE IF EXISTS image_tags;
-DROP TABLE IF EXISTS image_paths;
 DROP TABLE IF EXISTS image_devices;
 DROP TABLE IF EXISTS images;

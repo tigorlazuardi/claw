@@ -4,8 +4,8 @@
   import type {
     ListSourcesRequest,
     ListSourcesResponse,
+    ListSourcesResponse_Item,
   } from "#/gen/claw/v1/source_service_pb";
-  import type { Source } from "#/gen/claw/v1/source_pb";
   import IconImport from "@lucide/svelte/icons/import";
   import { resource, useDebounce, watch } from "runed";
 
@@ -69,7 +69,7 @@
     </div>
   {:else if listResource.error}
     {@render error(listResource.error)}
-  {:else if listResource.current?.sources.length}
+  {:else if listResource.current?.items.length}
     {@render data(listResource.current)}
   {:else}
     {@render emptyState()}
@@ -86,8 +86,8 @@
 
 {#snippet data(data: ListSourcesResponse)}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {#each data.sources as source}
-      {@render sourceCard(source)}
+    {#each data.items as item (item.source!.id)}
+      {@render sourceCard(item!)}
     {/each}
   </div>
 {/snippet}
@@ -123,7 +123,8 @@
   </div>
 {/snippet}
 
-{#snippet sourceCard(source: Source)}
+{#snippet sourceCard(item: ListSourcesResponse_Item)}
+  {@const source = item.source!}
   <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
       <div class="flex justify-between items-start mb-2">
@@ -150,11 +151,12 @@
         {source.countback}
       </p>
 
-      {#if source.schedules.length > 0}
+      {#if item.schedules.length > 0}
+        {@const schedules = item.schedules}
         <div class="mb-3">
           <p class="font-semibold text-sm mb-1">Schedules:</p>
           <div class="flex flex-wrap gap-1">
-            {#each source.schedules as schedule}
+            {#each schedules as schedule (schedule.id)}
               <div class="badge badge-secondary">{schedule.schedule}</div>
             {/each}
           </div>

@@ -54,79 +54,11 @@ func (s *Claw) UpdateImage(ctx context.Context, req *clawv1.UpdateImageRequest) 
 		return nil, fmt.Errorf("failed to update image: %w", err)
 	}
 
-	// Update device assignments if provided
-	if req.DeviceIds != nil {
-		// Delete existing device assignments
-		_, err = ImageDevices.DELETE().
-			WHERE(ImageDevices.ImageID.EQ(Int64(req.Id))).
-			ExecContext(ctx, tx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to delete existing device assignments: %w", err)
-		}
-
-		// Insert new device assignments
-		if len(req.DeviceIds) > 0 {
-			var deviceAssignments []model.ImageDevices
-			for _, deviceID := range req.DeviceIds {
-				deviceAssignments = append(deviceAssignments, model.ImageDevices{
-					ImageID:   req.Id,
-					DeviceID:  deviceID,
-					CreatedAt: nowMillis,
-				})
-			}
-
-			_, err = ImageDevices.
-				INSERT(ImageDevices.ImageID, ImageDevices.DeviceID, ImageDevices.CreatedAt).
-				MODELS(deviceAssignments).
-				ExecContext(ctx, tx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create device assignments: %w", err)
-			}
-		}
-	}
-
-	// Update tags if provided
-	if req.Tags != nil {
-		// Delete existing tags
-		_, err = ImageTags.DELETE().
-			WHERE(ImageTags.ImageID.EQ(Int64(req.Id))).
-			ExecContext(ctx, tx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to delete existing tags: %w", err)
-		}
-
-		// Insert new tags
-		if len(req.Tags) > 0 {
-			var imageTags []model.ImageTags
-			for _, tag := range req.Tags {
-				imageTags = append(imageTags, model.ImageTags{
-					ImageID:   req.Id,
-					Tag:       tag,
-					CreatedAt: nowMillis,
-				})
-			}
-
-			_, err = ImageTags.
-				INSERT(ImageTags.ImageID, ImageTags.Tag, ImageTags.CreatedAt).
-				MODELS(imageTags).
-				ExecContext(ctx, tx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create image tags: %w", err)
-			}
-		}
-	}
-
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Get updated image with all related data
-	imageResponse, err := s.GetImage(ctx, &clawv1.GetImageRequest{Id: req.Id})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get updated image: %w", err)
-	}
-
 	return &clawv1.UpdateImageResponse{
-		Image: imageResponse.Image,
+		Image: imageModelToProto(imageRow),
 	}, nil
 }

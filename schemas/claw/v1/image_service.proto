@@ -3,8 +3,11 @@ syntax = "proto3";
 package claw.v1;
 
 import "buf/validate/validate.proto";
+import "claw/v1/device.proto";
 import "claw/v1/image.proto";
 import "claw/v1/pagination.proto";
+import "claw/v1/source.proto";
+import "claw/v1/tag.proto";
 
 // ImageService provides operations for managing downloaded images
 service ImageService {
@@ -37,6 +40,13 @@ message GetImageRequest {
 message GetImageResponse {
   // The requested image
   Image image = 1;
+  message Assignment {
+    string path = 1;
+    Device device = 2;
+  }
+  repeated Assignment assignments = 2;
+  repeated Tag tags = 3;
+  Source source = 4;
 }
 
 // List images request
@@ -69,6 +79,10 @@ message ListImagesRequest {
 message ListImagesResponse {
   // List of images
   repeated Image images = 1;
+  message Entry {
+    Image image = 1;
+    repeated Tag tags = 2;
+  }
 
   Pagination pagination = 2;
 }
@@ -89,12 +103,6 @@ message UpdateImageRequest {
 
   // Updated favorite status (optional)
   optional bool is_favorite = 5;
-
-  // Updated tags (replaces existing tags)
-  repeated string tags = 6;
-
-  // Updated device assignments (replaces existing assignments)
-  repeated int64 device_ids = 7;
 }
 
 // Update image response

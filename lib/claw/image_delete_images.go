@@ -29,23 +29,6 @@ func (s *Claw) DeleteImages(ctx context.Context, req *clawv1.DeleteImagesRequest
 		idExprs = append(idExprs, Int64(id))
 	}
 
-	// Delete related data first (due to foreign key constraints)
-	// Delete image tags
-	_, err = ImageTags.DELETE().
-		WHERE(ImageTags.ImageID.IN(idExprs...)).
-		ExecContext(ctx, tx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete image tags: %w", err)
-	}
-
-	// Delete image paths
-	_, err = ImagePaths.DELETE().
-		WHERE(ImagePaths.ImageID.IN(idExprs...)).
-		ExecContext(ctx, tx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete image paths: %w", err)
-	}
-
 	// Delete image device assignments
 	_, err = ImageDevices.DELETE().
 		WHERE(ImageDevices.ImageID.IN(idExprs...)).
@@ -75,3 +58,4 @@ func (s *Claw) DeleteImages(ctx context.Context, req *clawv1.DeleteImagesRequest
 		DeletedCount: int32(rowsAffected),
 	}, nil
 }
+

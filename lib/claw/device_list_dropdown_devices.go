@@ -13,9 +13,9 @@ import (
 // ListDropDownDevices returns a simple list of devices for dropdown selection
 func (s *Claw) ListDropDownDevices(ctx context.Context, req *clawv1.ListDropDownDevicesRequest) (*clawv1.ListDropDownDevicesResponse, error) {
 	// Select only slug and name for dropdown
-	stmt := SELECT(Devices.Slug, Devices.Name).
+	stmt := SELECT(Devices.ID, Devices.Name).
 		FROM(Devices).
-		ORDER_BY(Devices.Name.ASC(), Devices.Slug.ASC())
+		ORDER_BY(Devices.Name.ASC())
 
 	var deviceRows []model.Devices
 	err := stmt.QueryContext(ctx, s.db, &deviceRows)
@@ -24,22 +24,15 @@ func (s *Claw) ListDropDownDevices(ctx context.Context, req *clawv1.ListDropDown
 	}
 
 	// Convert to protobuf dropdown options
-	var devices []*clawv1.DeviceDropDownOption
+	var items []*clawv1.ListDropDownDevicesResponse_Item
 	for _, deviceRow := range deviceRows {
-		option := &clawv1.DeviceDropDownOption{
-			Slug: deviceRow.Slug,
-		}
-
-		// Set name if it's not empty
-		if deviceRow.Name != "" {
-			option.Name = &deviceRow.Name
-		}
-
-		devices = append(devices, option)
+		items = append(items, &clawv1.ListDropDownDevicesResponse_Item{
+			Id:   int32(*deviceRow.ID),
+			Name: deviceRow.Name,
+		})
 	}
 
 	return &clawv1.ListDropDownDevicesResponse{
-		Devices: devices,
+		Items: items,
 	}, nil
 }
-

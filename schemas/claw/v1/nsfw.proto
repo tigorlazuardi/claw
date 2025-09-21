@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package claw.v1;
+
+// NSFWMode defines how NSFW content should be handled for a device
+enum NSFWMode {
+  // Unspecified NSFW mode
+  NSFW_MODE_UNSPECIFIED = 0;
+
+  // Allow NSFW content
+  NSFW_MODE_ALLOW = 1;
+
+  // Disallow NSFW content
+  NSFW_MODE_DISALLOW = 2;
+
+  // Only allow NSFW content
+  NSFW_MODE_ONLY = 3;
+}

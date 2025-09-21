@@ -24,6 +24,7 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 	nowMillis := types.UnixMilliNow()
 
 	columns := ColumnList{
+		Devices.Name,
 		Devices.Slug,
 		Devices.Width,
 		Devices.Height,
@@ -31,12 +32,6 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 		Devices.NsfwMode,
 		Devices.CreatedAt,
 		Devices.UpdatedAt,
-	}
-	if req.Name != nil {
-		columns = append(columns, Devices.Name)
-	}
-	if req.SaveDir != nil {
-		columns = append(columns, Devices.SaveDir)
 	}
 	if req.FilenameTemplate != nil {
 		columns = append(columns, Devices.FilenameTemplate)
@@ -59,12 +54,14 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 	if req.ImageMaxFilesize != nil {
 		columns = append(columns, Devices.ImageMaxFileSize)
 	}
+	if req.IsDisabled != nil {
+		columns = append(columns, Devices.IsDisabled)
+	}
 
 	// Insert device
 	deviceStmt := Devices.INSERT(columns).MODEL(model.Devices{
 		Slug:                  req.Slug,
-		Name:                  Deref(req.Name),
-		SaveDir:               Deref(req.SaveDir),
+		Name:                  req.Name,
 		FilenameTemplate:      Deref(req.FilenameTemplate),
 		Width:                 int64(req.Width),
 		Height:                int64(req.Height),
@@ -78,6 +75,7 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 		NsfwMode:              int64(req.Nsfw),
 		CreatedAt:             nowMillis,
 		UpdatedAt:             nowMillis,
+		IsDisabled:            types.Bool(Deref(req.IsDisabled)),
 	}).RETURNING(Devices.AllColumns)
 
 	var deviceRow model.Devices
@@ -88,12 +86,12 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 	}
 
 	// Create device-source subscriptions if provided
-	if len(req.Subscriptions) > 0 {
-		if err := s.validateSubscriptionExists(ctx, tx, req.Subscriptions); err != nil {
+	if len(req.Sources) > 0 {
+		if err := s.validateSubscriptionExists(ctx, tx, req.Sources); err != nil {
 			return nil, err
 		}
 		var subscriptions []model.DeviceSources
-		for _, sourceID := range req.Subscriptions {
+		for _, sourceID := range req.Sources {
 			subscriptions = append(subscriptions, model.DeviceSources{
 				DeviceID:  *deviceRow.ID,
 				SourceID:  sourceID,
@@ -118,12 +116,10 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 	// Convert to protobuf
 	device := &clawv1.Device{
 		Id:                    *deviceRow.ID,
-		Slug:                  deviceRow.Slug,
-		Name:                  &deviceRow.Name,
+		Name:                  deviceRow.Name,
 		Height:                int32(deviceRow.Height),
 		Width:                 int32(deviceRow.Width),
 		AspectRatioDifference: deviceRow.AspectRatioDifference,
-		SaveDir:               deviceRow.SaveDir,
 		FilenameTemplate:      &deviceRow.FilenameTemplate,
 		ImageMinHeight:        uint32(deviceRow.ImageMinHeight),
 		ImageMinWidth:         uint32(deviceRow.ImageMinWidth),
@@ -134,11 +130,11 @@ func (s *Claw) CreateDevice(ctx context.Context, req *clawv1.CreateDeviceRequest
 		Nsfw:                  clawv1.NSFWMode(deviceRow.NsfwMode),
 		CreatedAt:             deviceRow.CreatedAt.ToProto(),
 		UpdatedAt:             deviceRow.UpdatedAt.ToProto(),
-		Subscriptions:         req.Subscriptions,
 	}
 
 	return &clawv1.CreateDeviceResponse{
-		Device: device,
+		Device:  device,
+		Sources: req.Sources,
 	}, nil
 }
 

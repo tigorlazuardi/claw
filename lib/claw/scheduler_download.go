@@ -113,11 +113,11 @@ func (scheduler *scheduler) downloadImageToTemp(ctx context.Context, image sourc
 
 	resp, err := scheduler.httpclient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to download image: %w", err)
+		return "", fmt.Errorf("failed to execute download request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 300 {
 		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
 	}
 
@@ -131,7 +131,7 @@ func (scheduler *scheduler) downloadImageToTemp(ctx context.Context, image sourc
 	// Copy response body to temp file
 	_, err = io.Copy(tmpFile, reader)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy image data: %w", err)
+		return "", fmt.Errorf("failed to download image data: %w", err)
 	}
 
 	return tmpFile.Name(), nil
@@ -249,51 +249,54 @@ func (scheduler *scheduler) findOrCreateImage(ctx context.Context, image source.
 
 // processDeviceAssignment handles device assignment and creates hardlinks/copies
 func (scheduler *scheduler) processDeviceAssignment(ctx context.Context, image source.Image, device model.Devices, imagePath, sourceName string, imageID int64) error {
-	// Generate filename template
-	filenameTemplate := device.FilenameTemplate
-	if filenameTemplate == "" {
-		filenameTemplate = sourceName + "_" + image.Filename
-	}
-
-	// Determine target directory
-	var targetDir string
-	if device.SaveDir == "" {
-		targetDir = filepath.Join(scheduler.config.Download.BaseDir, "devices", device.Slug)
-	} else {
-		targetDir = device.SaveDir
-	}
-
-	targetPath := filepath.Join(targetDir, filenameTemplate)
-
-	// Ensure target directory exists
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create device directory: %w", err)
-	}
-
-	// Try hardlink first, fallback to copy
-	if err := os.Link(imagePath, targetPath); err != nil {
-		if err := scheduler.copyFile(imagePath, targetPath); err != nil {
-			return fmt.Errorf("failed to copy image to device location: %w", err)
-		}
-	}
-
-	// Update ImagePaths table
-	relativeDevicePath := strings.TrimPrefix(targetPath, scheduler.config.Download.BaseDir+"/")
-
-	// Insert device path into ImagePaths table
-	nowMillis := types.UnixMilliNow()
-	_, err := ImagePaths.INSERT(
-		ImagePaths.ImageID,
-		ImagePaths.Path,
-		ImagePaths.CreatedAt,
-	).VALUES(
-		imageID,
-		relativeDevicePath,
-		nowMillis,
-	).ExecContext(ctx, scheduler.claw.db)
-	if err != nil {
-		return fmt.Errorf("failed to insert image path: %w", err)
-	}
-
-	return nil
+	panic("this AI stuff is shit")
+	// // Generate filename template
+	// filenameTemplate := device.FilenameTemplate
+	// if filenameTemplate == "" {
+	// 	filenameTemplate = sourceName + "_" + image.Filename
+	// }
+	//
+	// pathTemplate := filepath.Join("devices", device.Slug, filenameTemplate)
+	//
+	// // Determine target directory
+	// var targetDir string
+	// if device.SaveDir == "" {
+	// 	targetDir = filepath.Join(scheduler.config.Download.BaseDir, "devices", device.Slug)
+	// } else {
+	// 	targetDir = device.SaveDir
+	// }
+	//
+	// targetPath := filepath.Join(targetDir, filenameTemplate)
+	//
+	// // Ensure target directory exists
+	// if err := os.MkdirAll(targetDir, 0o755); err != nil {
+	// 	return fmt.Errorf("failed to create device directory: %w", err)
+	// }
+	//
+	// // Try hardlink first, fallback to copy
+	// if err := os.Link(imagePath, targetPath); err != nil {
+	// 	if err := scheduler.copyFile(imagePath, targetPath); err != nil {
+	// 		return fmt.Errorf("failed to copy image to device location: %w", err)
+	// 	}
+	// }
+	//
+	// // Update ImagePaths table
+	// relativeDevicePath := strings.TrimPrefix(targetPath, scheduler.config.Download.BaseDir+"/")
+	//
+	// // Insert device path into ImagePaths table
+	// nowMillis := types.UnixMilliNow()
+	// _, err := ImagePaths.INSERT(
+	// 	ImagePaths.ImageID,
+	// 	ImagePaths.Path,
+	// 	ImagePaths.CreatedAt,
+	// ).VALUES(
+	// 	imageID,
+	// 	relativeDevicePath,
+	// 	nowMillis,
+	// ).ExecContext(ctx, scheduler.claw.db)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to insert image path: %w", err)
+	// }
+	//
+	// return nil
 }

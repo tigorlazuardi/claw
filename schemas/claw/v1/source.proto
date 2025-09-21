@@ -25,15 +25,13 @@ message Source {
   bool is_disabled = 6;
 
   // Timestamp of last run (optional)
-  optional google.protobuf.Timestamp last_run_at = 7;
+  google.protobuf.Timestamp last_run_at = 7;
 
   // Timestamp when source was created
   google.protobuf.Timestamp created_at = 8;
 
   // Timestamp when source was last updated
   google.protobuf.Timestamp updated_at = 9;
-
-  repeated SourceSchedule schedules = 10;
 }
 
 // SourceSchedule represents a schedule for a source

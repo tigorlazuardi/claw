@@ -13,9 +13,7 @@ message Tag {
   // The tag name
   string name = 2 [(buf.validate.field).string.min_len = 1];
 
-  // Number of images with this tag
-  int32 image_count = 3;
-
   // Timestamp when tag was created
   google.protobuf.Timestamp created_at = 4;
 }
+

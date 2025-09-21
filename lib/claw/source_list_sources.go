@@ -90,7 +90,7 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 	}
 	if len(rows) == 0 {
 		return &clawv1.ListSourcesResponse{
-			Sources: []*clawv1.Source{},
+			Items: []*clawv1.ListSourcesResponse_Item{},
 			Pagination: &clawv1.Pagination{
 				Size: &limit,
 			},
@@ -110,10 +110,13 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 		firstRow := rows[0]
 		pagination.PrevToken = Ptr(uint32(*firstRow.ID))
 	}
-	// Convert to protobuf
-	sources := make([]*clawv1.Source, 0, len(rows))
+
+	items := make([]*clawv1.ListSourcesResponse_Item, 0, len(rows))
 	for _, row := range rows {
-		source := &clawv1.Source{
+		item := &clawv1.ListSourcesResponse_Item{
+			Schedules: make([]*clawv1.SourceSchedule, 0, len(row.Schedules)),
+		}
+		item.Source = &clawv1.Source{
 			Id:          int64(*row.ID),
 			Name:        row.Name,
 			DisplayName: row.DisplayName,
@@ -122,20 +125,19 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 			IsDisabled:  row.IsDisabled.Bool(),
 			CreatedAt:   row.CreatedAt.ToProto(),
 			UpdatedAt:   row.UpdatedAt.ToProto(),
-			Schedules:   make([]*clawv1.SourceSchedule, 0, len(row.Schedules)),
 		}
 		for _, sched := range row.Schedules {
-			source.Schedules = append(source.Schedules, &clawv1.SourceSchedule{
+			item.Schedules = append(item.Schedules, &clawv1.SourceSchedule{
 				Id:        int64(*sched.ID),
 				Schedule:  sched.Schedule,
 				CreatedAt: sched.CreatedAt.ToProto(),
 			})
 		}
-		sources = append(sources, source)
+		items = append(items, item)
 	}
 
 	response := &clawv1.ListSourcesResponse{
-		Sources:    sources,
+		Items:      items,
 		Pagination: pagination,
 	}
 

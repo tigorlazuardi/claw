@@ -48,6 +48,7 @@ type RedditPostData struct {
 			} `json:"source"`
 		} `json:"images"`
 	} `json:"preview"`
+	Over18 bool `json:"over_18"`
 }
 
 // Run runs the source to fetch image Metadata based on the given request.
@@ -224,6 +225,7 @@ func (re *Reddit) convertPostToImage(ctx context.Context, post RedditPostData, r
 		Website:     fmt.Sprintf("https://reddit.com%s", post.Permalink),
 		PostedAt:    time.Unix(int64(post.CreatedUTC), 0),
 		Filename:    re.generateFilename(ctx, post, request),
+		NSFW:        post.Over18,
 	}
 
 	// Try to get dimensions from preview if available
@@ -300,7 +302,7 @@ func (re *Reddit) extractImageNameFromURL(imageURL string) string {
 
 	// Remove extension to get just the name
 	name := strings.TrimSuffix(basename, filepath.Ext(basename))
-	
+
 	// Sanitize the name
 	return re.sanitizeFilename(name)
 }
@@ -357,14 +359,14 @@ func (re *Reddit) sanitizeFilename(filename string) string {
 	// Replace problematic characters with underscores
 	reg := regexp.MustCompile(`[<>:"/\\|?*\x00-\x1f]`)
 	sanitized := reg.ReplaceAllString(filename, "_")
-	
+
 	// Remove multiple consecutive underscores and dots
 	reg = regexp.MustCompile(`[_.]{2,}`)
 	sanitized = reg.ReplaceAllString(sanitized, "_")
-	
+
 	// Trim leading/trailing spaces, dots, and underscores
 	sanitized = strings.Trim(sanitized, " ._")
-	
+
 	return sanitized
 }
 
@@ -412,4 +414,3 @@ func (re *Reddit) isImgurImageValid(ctx context.Context, imgurURL string) bool {
 		return false
 	}
 }
-

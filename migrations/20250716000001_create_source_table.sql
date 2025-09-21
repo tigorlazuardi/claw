@@ -6,10 +6,9 @@ CREATE TABLE IF NOT EXISTS sources (
     parameter TEXT NOT NULL,
     countback INTEGER NOT NULL DEFAULT 0,
     is_disabled INTEGER NOT NULL DEFAULT 0,
-    last_run_at INTEGER,
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    last_active_at INTEGER, -- Last time an image was downloaded from this source
+    last_run_at INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(name, parameter)
 );
 

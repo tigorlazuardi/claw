@@ -17,33 +17,34 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 	isReversed := req.Pagination != nil && req.Pagination.GetPrevToken() != 0
 	cond := Bool(true)
 	var from ReadableTable = Images.
-		INNER_JOIN(ImagePaths, ImagePaths.ImageID.EQ(Images.ID)).
 		INNER_JOIN(ImageTags, ImageTags.ImageID.EQ(Images.ID)).
-		INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID))
+		INNER_JOIN(Tags, Tags.ID.EQ(ImageTags.TagID))
 
 	// Search filter
 	if search := req.GetSearch(); search != "" {
-		searchTerm := "%" + search + "%"
+		searchTerm := String("%" + search + "%")
 		cond = cond.AND(
-			Images.Title.LIKE(String(searchTerm)).
-				OR(Images.PostAuthor.LIKE(String(searchTerm))).
-				OR(Images.PostURL.LIKE(String(searchTerm))).
-				OR(Images.DownloadURL.LIKE(String(searchTerm))).
-				OR(ImageTags.Tag.LIKE(String(searchTerm))),
+			Images.Title.LIKE(searchTerm).
+				OR(Images.PostAuthor.LIKE(searchTerm)).
+				OR(Images.PostURL.LIKE(searchTerm)).
+				OR(Images.DownloadURL.LIKE(searchTerm)).
+				OR(Tags.Name.LIKE(searchTerm)),
 		)
 	}
 
 	// Source filter
 	if req.SourceId != nil {
+		from.INNER_JOIN(Sources, Sources.ID.EQ(Images.SourceID))
 		cond = cond.AND(Images.SourceID.EQ(Int64(*req.SourceId)))
 	}
 
 	if req.DeviceId != nil {
+		from = from.INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID))
 		cond = cond.AND(ImageDevices.DeviceID.EQ(Int64(*req.DeviceId)))
 	}
 
 	if len(req.Tags) > 0 {
-		cond = cond.AND(ImageTags.Tag.IN(jetStringsExpr(req.Tags...)...))
+		cond = cond.AND(Tags.Name.IN(jetStringsExpr(req.Tags...)...))
 	}
 
 	if req.IsFavorite != nil {
@@ -101,11 +102,10 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 
 	var out []struct {
 		model.Images
-		ImagePaths   []model.ImagePaths
 		ImageDevices []model.ImageDevices
 		ImageTags    []model.ImageTags
 	}
-	err := SELECT(Images.AllColumns).
+	err := SELECT(Images.AllColumns, Tags.AllColumns).
 		FROM(from).
 		WHERE(cond).
 		ORDER_BY(sorts...).
@@ -126,28 +126,15 @@ func (s *Claw) ListImages(ctx context.Context, req *clawv1.ListImagesRequest) (*
 	var nextPageToken, prevPageToken *uint32
 	if hasMore {
 		nextPageToken = Ptr(uint32(*out[len(out)-1].ID))
+	}
+	if isReversed {
 		prevPageToken = Ptr(uint32(*out[0].ID))
 	}
 
 	// Convert to []clawv1.Image
 	images := make([]*clawv1.Image, len(out))
 	for i, row := range out {
-		deviceIDs := make([]int64, len(row.ImageDevices))
-		for j, device := range row.ImageDevices {
-			deviceIDs[j] = device.DeviceID
-		}
-
-		paths := make([]string, len(row.ImagePaths))
-		for j, path := range row.ImagePaths {
-			paths[j] = path.Path
-		}
-
-		tags := make([]string, len(row.ImageTags))
-		for j, tag := range row.ImageTags {
-			tags[j] = tag.Tag
-		}
-
-		images[i] = s.imageModelToProto(row.Images, deviceIDs, paths, tags)
+		images[i] = imageModelToProto(row.Images)
 	}
 
 	return &clawv1.ListImagesResponse{

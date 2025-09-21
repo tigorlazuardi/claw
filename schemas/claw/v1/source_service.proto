@@ -168,8 +168,12 @@ message ListSourcesRequest {
 
 // List sources response
 message ListSourcesResponse {
+  message Item {
+    Source source = 1;
+    repeated SourceSchedule schedules = 2;
+  }
   // List of sources
-  repeated Source sources = 1;
+  repeated Item items = 1;
   Pagination pagination = 2;
 }
 
