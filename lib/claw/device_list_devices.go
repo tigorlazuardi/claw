@@ -77,27 +77,24 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		imageDevicesJoined = true
 		from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
 		extraColumns = append(extraColumns, COUNT(ImageDevices.ImageID).AS("image_count"))
-		groupBy = Devices.ID
+		groupBy = ImageDevices.DeviceID
 	}
 	if sourceID := req.GetSourceId(); sourceID != 0 {
 		from = from.INNER_JOIN(DeviceSources, DeviceSources.DeviceID.EQ(Devices.ID))
 		cond = cond.AND(DeviceSources.SourceID.EQ(Int64(int64(sourceID))))
 	}
 	if lastImage := req.GetLastImage(); lastImage != nil && lastImage.GetInclude() {
-		nsfw := lastImage.GetNsfw()
 		extraColumns = append(extraColumns, Images.AllColumns.As("last_image"))
-		if nsfw == clawv1.NSFWMode_NSFW_MODE_DISALLOW || nsfw == clawv1.NSFWMode_NSFW_MODE_ONLY {
-			if !imageDevicesJoined {
-				from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
-				imageDevicesJoined = true
-			}
-			from = from.INNER_JOIN(Images, Images.ID.EQ(ImageDevices.ImageID))
-			if nsfw == clawv1.NSFWMode_NSFW_MODE_DISALLOW {
-				cond = cond.AND(Images.IsNsfw.EQ(Int(0)))
-			}
-			if nsfw == clawv1.NSFWMode_NSFW_MODE_ONLY {
-				cond = cond.AND(Images.IsNsfw.EQ(Int(1)))
-			}
+		if !imageDevicesJoined {
+			from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
+			imageDevicesJoined = true
+		}
+		from = from.INNER_JOIN(Images, Images.ID.EQ(ImageDevices.ImageID))
+		switch lastImage.GetNsfw() {
+		case clawv1.NSFWMode_NSFW_MODE_DISALLOW:
+			cond = cond.AND(Images.IsNsfw.EQ(Int(0)))
+		case clawv1.NSFWMode_NSFW_MODE_ONLY:
+			cond = cond.AND(Images.IsNsfw.EQ(Int(1)))
 		}
 	}
 	stmt := SELECT(Devices.AllColumns, extraColumns...).
@@ -114,6 +111,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		ImageCount *int64
 		LastImage  *model.Images
 	}
+
 	err := stmt.QueryContext(ctx, s.db, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list devices: %w", err)
