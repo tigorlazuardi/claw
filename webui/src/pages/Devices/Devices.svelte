@@ -1,21 +1,45 @@
 <script lang="ts">
   import { createQuery } from "@tanstack/svelte-query";
-  import type { ListDevicesRequest } from "#/gen/claw/v1/device_service_pb";
   import { getDeviceServiceClient } from "#/connectrpc";
-  import type { M } from "#/types";
   import { fromQuery, toQuery } from "query-string-parser";
-  import { watch, useDebounce } from "runed";
+  import { watch, useDebounce, PersistedState } from "runed";
   import IconMonitorSmartphone from "@lucide/svelte/icons/monitor-smartphone";
   import IconCircleMinus from "@lucide/svelte/icons/circle-minus";
 
-  // TODO: Fix query state. Use nuqs-svelte library.
-  let queryState: Partial<M<ListDevicesRequest>> = $state(
-    fromQuery(window.location.search) || {
-      lastImage: {
-        include: true,
-      },
-      countImages: true,
-    },
+  import * as v from "valibot";
+  import { NSFWMode } from "#/gen/claw/v1/nsfw_pb";
+
+  const nsfwState = new PersistedState("nsfw", NSFWMode.NSFW_MODE_DISALLOW);
+
+  const lastImageSchema = v.object({
+    include: v.pipe(
+      v.optional(v.string(), "true"),
+      v.transform((val) => val === "true"),
+    ),
+    nsfw: v.pipe(
+      v.optional(v.string(), () => nsfwState.current.toString()),
+      v.transform((val) => {
+        const v = parseInt(val);
+        return Object.values(NSFWMode).includes(v)
+          ? (v as NSFWMode)
+          : nsfwState.current;
+      }),
+    ),
+  });
+
+  const querySchema = v.object({
+    lastImage: v.optional(lastImageSchema, {
+      include: v.getDefault(lastImageSchema.entries.include),
+      nsfw: v.getDefault(lastImageSchema.entries.nsfw),
+    }),
+    countImages: v.pipe(
+      v.optional(v.string(), "true"),
+      v.transform((val) => val === "true"),
+    ),
+  });
+
+  let queryState = $state(
+    v.parse(querySchema, fromQuery(window.location.search) || {}),
   );
 
   const listDeviceQuery = createQuery({
@@ -25,12 +49,12 @@
       const client = await getDeviceServiceClient({ signal });
       return client.listDevices(queryState);
     },
-    refetchOnWindowFocus() {
-      return !!queryState.pagination?.prevToken;
-    },
-    refetchOnReconnect() {
-      return !!queryState.pagination?.prevToken;
-    },
+    // refetchOnWindowFocus() {
+    //   return !!queryState.pagination?.prevToken;
+    // },
+    // refetchOnReconnect() {
+    //   return !!queryState.pagination?.prevToken;
+    // },
   });
 
   const debounced = useDebounce(() => $listDeviceQuery.refetch());
@@ -38,6 +62,7 @@
   watch(
     () => queryState,
     (val, prev) => {
+      console.log(toQuery(val));
       if (!prev) return;
       const qs = toQuery(val);
       if (qs !== "") {
