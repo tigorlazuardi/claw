@@ -72,9 +72,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		extraColumns []Projection
 		groupBy      GroupByClause
 	)
-	imageDevicesJoined := false
 	if req.GetCountImages() {
-		imageDevicesJoined = true
 		from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
 		extraColumns = append(extraColumns, COUNT(ImageDevices.ImageID).AS("image_count"))
 		groupBy = ImageDevices.DeviceID
@@ -84,18 +82,24 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 		cond = cond.AND(DeviceSources.SourceID.EQ(Int64(int64(sourceID))))
 	}
 	if lastImage := req.GetLastImage(); lastImage != nil && lastImage.GetInclude() {
-		extraColumns = append(extraColumns, Images.AllColumns.As("last_image"))
-		if !imageDevicesJoined {
-			from = from.INNER_JOIN(ImageDevices, ImageDevices.DeviceID.EQ(Devices.ID))
-			imageDevicesJoined = true
-		}
-		from = from.INNER_JOIN(Images, Images.ID.EQ(ImageDevices.ImageID))
+		subquery := SELECT(Images.AllColumns).
+			FROM(
+				Images.
+					INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID)).
+					INNER_JOIN(Devices, Devices.ID.EQ(ImageDevices.DeviceID)),
+			).
+			WHERE(Devices.ID.EQ(Devices.ID)).
+			ORDER_BY(Images.CreatedAt.DESC(), Images.ID.DESC()).
+			LIMIT(1)
 		switch lastImage.GetNsfw() {
 		case clawv1.NSFWMode_NSFW_MODE_DISALLOW:
-			cond = cond.AND(Images.IsNsfw.EQ(Int(0)))
+			subquery = subquery.WHERE(Images.IsNsfw.EQ(Int(int64(0))))
 		case clawv1.NSFWMode_NSFW_MODE_ONLY:
-			cond = cond.AND(Images.IsNsfw.EQ(Int(1)))
+			subquery = subquery.WHERE(Images.IsNsfw.EQ(Int(int64(1))))
 		}
+		subtable := subquery.AsTable("last_image")
+		from = from.INNER_JOIN(subtable, IntegerColumn("last_image.id").EQ(ImageDevices.ImageID))
+		extraColumns = append(extraColumns, subtable.AllColumns().As("last_image"))
 	}
 	stmt := SELECT(Devices.AllColumns, extraColumns...).
 		FROM(from).
@@ -114,6 +118,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 
 	err := stmt.QueryContext(ctx, s.db, &rows)
 	if err != nil {
+		s.logger.Error(stmt.DebugSql())
 		return nil, fmt.Errorf("failed to list devices: %w", err)
 	}
 	if len(rows) == 0 {

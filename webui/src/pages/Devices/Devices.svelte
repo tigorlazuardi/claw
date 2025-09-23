@@ -13,6 +13,40 @@
   function parseBool(s: string) {
     return s === "true";
   }
+
+  function removeFalsyRecursive(obj: any): any {
+    // Handle null or undefined input
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
+    // Handle arrays
+    if (Array.isArray(obj)) {
+      return obj
+        .map((item: any) => removeFalsyRecursive(item)) // Recursively process each item
+        .filter((item) => Boolean(item)); // Remove falsy values
+    }
+
+    // Handle objects (but not Date, RegExp, etc.)
+    if (typeof obj === "object" && obj.constructor === Object) {
+      const result: any = {};
+
+      for (const [key, value] of Object.entries(obj)) {
+        const processedValue = removeFalsyRecursive(value);
+
+        // Only add to result if the processed value is truthy
+        if (Boolean(processedValue)) {
+          result[key] = processedValue;
+        }
+      }
+
+      return result;
+    }
+
+    // For primitive values, return as-is (filtering happens at parent level)
+    return obj;
+  }
+
   const querySchema = v.object({
     lastImage: v.fallback(
       v.object({
@@ -43,16 +77,15 @@
   const listDeviceQuery = createQuery({
     queryKey: ["devices", "list"],
     queryFn: async ({ signal }) => {
-      console.log($state.snapshot(queryState));
       const client = await getDeviceServiceClient({ signal });
       return client.listDevices(queryState);
     },
-    // refetchOnWindowFocus() {
-    //   return !!queryState.pagination?.prevToken;
-    // },
-    // refetchOnReconnect() {
-    //   return !!queryState.pagination?.prevToken;
-    // },
+    refetchOnWindowFocus() {
+      return !!queryState.pagination.prevToken;
+    },
+    refetchOnReconnect() {
+      return !!queryState.pagination.prevToken;
+    },
   });
 
   const debounced = useDebounce(() => $listDeviceQuery.refetch());
@@ -60,9 +93,9 @@
   watch(
     () => queryState,
     (val, prev) => {
-      console.log(toQuery(val));
+      console.log(toQuery(removeFalsyRecursive(val)));
       if (!prev) return;
-      const qs = toQuery(val);
+      const qs = toQuery(removeFalsyRecursive(val));
       if (qs !== "") {
         window.history.replaceState(null, "", `?${qs}`);
       }
