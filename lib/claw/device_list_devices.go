@@ -83,11 +83,7 @@ func (s *Claw) ListDevices(ctx context.Context, req *clawv1.ListDevicesRequest) 
 	}
 	if lastImage := req.GetLastImage(); lastImage != nil && lastImage.GetInclude() {
 		subquery := SELECT(Images.AllColumns).
-			FROM(
-				Images.
-					INNER_JOIN(ImageDevices, ImageDevices.ImageID.EQ(Images.ID)).
-					INNER_JOIN(Devices, Devices.ID.EQ(ImageDevices.DeviceID)),
-			).
+			FROM(Images).
 			WHERE(Devices.ID.EQ(Devices.ID)).
 			ORDER_BY(Images.CreatedAt.DESC(), Images.ID.DESC()).
 			LIMIT(1)
