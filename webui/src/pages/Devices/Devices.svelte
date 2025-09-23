@@ -1,40 +1,38 @@
 <script lang="ts">
   import { createQuery } from "@tanstack/svelte-query";
   import { getDeviceServiceClient } from "#/connectrpc";
+  import { getDevicePaginationSchema } from "#/connectrpc/pagination";
   import { fromQuery, toQuery } from "query-string-parser";
-  import { watch, useDebounce, PersistedState } from "runed";
+  import { watch, useDebounce } from "runed";
   import IconMonitorSmartphone from "@lucide/svelte/icons/monitor-smartphone";
   import IconCircleMinus from "@lucide/svelte/icons/circle-minus";
 
   import * as v from "valibot";
-  import { NSFWMode } from "#/gen/claw/v1/nsfw_pb";
+  import { nsfwState, parseNSFWState } from "#/store/searchQuery";
 
-  const nsfwState = new PersistedState("nsfw", NSFWMode.NSFW_MODE_DISALLOW);
-
-  const lastImageSchema = v.object({
-    include: v.pipe(
-      v.optional(v.string(), "true"),
-      v.transform((val) => val === "true"),
-    ),
-    nsfw: v.pipe(
-      v.optional(v.string(), () => nsfwState.current.toString()),
-      v.transform((val) => {
-        const v = parseInt(val);
-        return Object.values(NSFWMode).includes(v)
-          ? (v as NSFWMode)
-          : nsfwState.current;
-      }),
-    ),
-  });
-
+  function parseBool(s: string) {
+    return s === "true";
+  }
   const querySchema = v.object({
-    lastImage: v.optional(lastImageSchema, {
-      include: v.getDefault(lastImageSchema.entries.include),
-      nsfw: v.getDefault(lastImageSchema.entries.nsfw),
-    }),
-    countImages: v.pipe(
-      v.optional(v.string(), "true"),
-      v.transform((val) => val === "true"),
+    lastImage: v.fallback(
+      v.object({
+        include: v.fallback(v.pipe(v.string(), v.transform(parseBool)), true),
+        nsfw: v.fallback(
+          v.pipe(v.string(), v.transform(parseNSFWState)),
+          nsfwState.current,
+        ),
+      }),
+      {
+        include: true,
+        nsfw: nsfwState.current,
+      },
+    ),
+    countImages: v.fallback(v.pipe(v.string(), v.transform(parseBool)), true),
+    pagination: getDevicePaginationSchema(),
+    search: v.fallback(v.string(), ""),
+    sourceId: v.fallback(
+      v.pipe(v.string(), v.transform(parseInt), v.number()),
+      0,
     ),
   });
 

@@ -1,43 +1,37 @@
 import * as v from "valibot";
 
-import { PersistedState } from "runed";
+import { deviceListSize } from "#/store/searchQuery";
 
-function createPaginationSchema(key: string, defaultSize: number) {
-  const state = new PersistedState(key, defaultSize);
+function createPaginationSchema(defaultSize: number) {
   return v.object({
-    size: v.pipe(
-      v.optional(v.string(), state.current.toString()),
-      v.transform((val) => {
-        const num = parseInt(val);
-        return isNaN(num) ? state.current : num;
-      }),
+    size: v.fallback(
+      v.pipe(v.string(), v.transform(parseInt), v.number()),
+      defaultSize,
     ),
-    nextToken: v.pipe(
-      v.undefinedable(v.string()),
-      v.transform((val) => {
-        if (!val) return 0;
-        const num = parseInt(val);
-        if (!num) return 0;
-        return num;
-      }),
+    nextToken: v.fallback(
+      v.pipe(v.string(), v.transform(parseInt), v.number()),
+      0,
     ),
-    prevToken: v.pipe(
-      v.undefinedable(v.string()),
-      v.transform((val) => {
-        if (!val) return 0;
-        const num = parseInt(val);
-        if (!num) return 0;
-        return num;
-      }),
+    prevToken: v.fallback(
+      v.pipe(v.string(), v.transform(parseInt), v.number()),
+      0,
     ),
   });
 }
 
-const devicePaginationSchema = createPaginationSchema("device.list.size", 25);
-export const DevicePaginationSchema = v.optional(devicePaginationSchema, {
-  size: v.getDefault(devicePaginationSchema.entries.size),
-  nextToken: v.getDefault(devicePaginationSchema.entries.nextToken),
-  prevToken: v.getDefault(devicePaginationSchema.entries.size),
-});
+/**
+ * getDevicePaginationSchema gets device pagination schema that is synced
+ * with the local storage of the browser
+ */
+export function getDevicePaginationSchema() {
+  const devicePaginationSchema = createPaginationSchema(deviceListSize.current);
+  return v.fallback(devicePaginationSchema, {
+    size: deviceListSize.current,
+    nextToken: 0,
+    prevToken: 0,
+  });
+}
 
-export type DevicePagination = v.InferOutput<typeof DevicePaginationSchema>;
+export type DevicePagination = v.InferOutput<
+  ReturnType<typeof getDevicePaginationSchema>
+>;
