@@ -78,6 +78,10 @@
             ];
 
             shellHook = ''
+              export PROJECT_DIR="$(git rev-parse --show-toplevel)"
+
+              (cd "$PROJECT_DIR/webui" && npm install)
+
               echo "🐾 Claw development environment loaded"
               echo "Go version: $(go version)"
               echo "Node version: $(node --version)"
@@ -108,7 +112,6 @@
               export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
               export CLAW_SERVER__WEBUI__PATH="$(pwd)/cmd/claw/internal/webui"
               export CLAW_SERVER__WEBUI__DEV_MODE=true
-              export PROJECT_DIR="$(pwd)"
               echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
               echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
 
