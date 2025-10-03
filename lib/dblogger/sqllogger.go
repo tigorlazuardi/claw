@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/networkteam/go-sqllogger"
@@ -38,6 +39,30 @@ func (sl DBLogger) ConnBegin(ctx context.Context, connID int64, txID int64, opts
 	)
 }
 
+type namedValueLogger []driver.NamedValue
+
+func (va namedValueLogger) LogValue() slog.Value {
+	attrs := make([]slog.Attr, len(va))
+	for i, v := range va {
+		if v.Name != "" {
+			attrs[i] = slog.Any(v.Name, v.Value)
+		} else {
+			attrs[i] = slog.Any(strconv.Itoa(v.Ordinal), v.Value)
+		}
+	}
+	return slog.GroupValue(attrs...)
+}
+
+type valueLogger []driver.Value
+
+func (va valueLogger) LogValue() slog.Value {
+	attrs := make([]slog.Attr, len(va))
+	for i, v := range va {
+		attrs[i] = slog.Any(strconv.Itoa(i+1), v)
+	}
+	return slog.GroupValue(attrs...)
+}
+
 func (sl DBLogger) ConnPrepare(ctx context.Context, connID int64, stmtID int64, query string) {
 }
 
@@ -45,37 +70,37 @@ func (sl DBLogger) ConnPrepareContext(ctx context.Context, connID int64, stmtID 
 }
 
 func (sl DBLogger) ConnQuery(ctx context.Context, connID int64, rowsID int64, query string, args []driver.Value) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "conn_id", connID, "rows_id", rowsID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", valueLogger(args), "conn_id", connID, "rows_id", rowsID)
 }
 
 func (sl DBLogger) ConnQueryContext(ctx context.Context, connID int64, rowsID int64, query string, args []driver.NamedValue) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "conn_id", connID, "rows_id", rowsID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", namedValueLogger(args), "conn_id", connID, "rows_id", rowsID)
 }
 
 func (sl DBLogger) ConnExec(ctx context.Context, connID int64, query string, args []driver.Value) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "conn_id", connID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", valueLogger(args), "conn_id", connID)
 }
 
 func (sl DBLogger) ConnExecContext(ctx context.Context, connID int64, query string, args []driver.NamedValue) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "conn_id", connID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", namedValueLogger(args), "conn_id", connID)
 }
 
 func (sl DBLogger) ConnClose(ctx context.Context, connID int64) {
 }
 
 func (sl DBLogger) StmtExec(ctx context.Context, stmtID int64, query string, args []driver.Value) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "stmt_id", stmtID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", valueLogger(args), "stmt_id", stmtID)
 }
 
 // StmtExecContext is called on an exec with context on a statement with the statement id.
 func (sl DBLogger) StmtExecContext(ctx context.Context, stmtID int64, query string, args []driver.NamedValue) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "stmt_id", stmtID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", namedValueLogger(args), "stmt_id", stmtID)
 }
 
 // StmtQuery is called on a query on a statement with the statement id and generated rows id.
 // Note: ctx is only for sqllogger metadata since StmtQuery does not receive a context.
 func (sl DBLogger) StmtQuery(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.Value) {
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "stmt_id", stmtID, "rows_id", rowsID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", valueLogger(args), "stmt_id", stmtID, "rows_id", rowsID)
 }
 
 // StmtQueryContext is called on a query with context on a statement with the statement id and generated rows id.
@@ -83,7 +108,7 @@ func (sl DBLogger) StmtQueryContext(ctx context.Context, stmtID int64, rowsID in
 	if ctx.Value(skipLogKey{}) != nil {
 		return
 	}
-	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", args, "stmt_id", stmtID, "rows_id", rowsID)
+	sl.Logger.Log(ctx, sl.Level, strings.TrimSpace(query), "args", namedValueLogger(args), "stmt_id", stmtID, "rows_id", rowsID)
 }
 
 // StmtClose is called on a close on a statement with the statement id.
