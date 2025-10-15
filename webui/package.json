@@ -26,8 +26,12 @@
     "@connectrpc/connect-web": "^2.1.0",
     "@dvcol/svelte-simple-router": "^2.7.2",
     "@lucide/svelte": "^0.542.0",
+    "@sjsf/ajv8-validator": "^2.4.0",
+    "@sjsf/daisyui5-theme": "^2.4.0",
+    "@sjsf/form": "^2.4.0",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/svelte-query": "^5.89.0",
+    "ajv": "^8.17.1",
     "bits-ui": "^2.9.6",
     "cronstrue": "^3.3.0",
     "query-string-parser": "^1.0.0",
@@ -36,6 +40,7 @@
     "svelte-exmarkdown": "^5.0.2",
     "svelte-forms": "^2.3.1",
     "tailwindcss": "^4.1.13",
+    "typebox": "^1.0.26",
     "valibot": "^1.1.0"
   }
 }
