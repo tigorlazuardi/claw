@@ -2,7 +2,6 @@ package otel
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func GetTraceEndpoint() string {
@@ -59,13 +57,11 @@ func CreateTraceProvider(ctx context.Context) (trace.TracerProvider, error) {
 	return sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher)), nil
 }
 
-// CreateNoopTraceProvider returns a no-op TracerProvider.
-//
-// This will allow tracing spans to be created but they will not be exported anywhere.
-//
-// Useful for logging using log/slog since they will be included in the log entry if they are printed to stderr, stdout, or a file.
+// CreateNoopTraceProvider returns a a tracer provider that does not export any traces,
+// but can be used to create spans. Useful for connecting logs with traces even if traces
+// are not used by the user.
 func CreateNoopTraceProvider() trace.TracerProvider {
-	return noop.TracerProvider{}
+	return sdktrace.NewTracerProvider()
 }
 
 var tracer = otel.Tracer("github.com/tigorlazuardi/claw/lib/otel")
@@ -85,6 +81,5 @@ func StartSpan(ctx context.Context) (context.Context, trace.Span) {
 		semconv.CodeLineNumber(frame.Line),
 	)
 	ctx, span := tracer.Start(ctx, fnName, opts)
-	fmt.Println(span.SpanContext().TraceID())
 	return ctx, span
 }
