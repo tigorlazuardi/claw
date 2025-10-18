@@ -40,14 +40,15 @@ func Setup(ctx context.Context) error {
 					return span.TraceID().String()
 				}
 				return ""
-			}).WithStaticKey("Trace ID")),
+			}).WithStaticKey("TraceID")),
 			prettylog.AddWritersBefore(prettylog.DefaultPrettyJSONWriter, prettylog.NewCommonWriter(func(info prettylog.RecordData) string {
 				span := trace.SpanContextFromContext(info.Context)
 				if span.HasSpanID() {
 					return span.SpanID().String()
 				}
 				return ""
-			}).WithStaticKey("Span ID")),
+			}).WithStaticKey("SpanID")),
+			prettylog.WithReplaceAttr(replaceAttr),
 		)
 		slog.SetDefault(slog.New(prettyHandler))
 		return nil
