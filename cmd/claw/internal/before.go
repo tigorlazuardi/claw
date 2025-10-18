@@ -7,36 +7,15 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/adrg/xdg"
-	"github.com/tigorlazuardi/prettylog"
+	"github.com/tigorlazuardi/claw/lib/logger"
+	"github.com/tigorlazuardi/claw/lib/otel"
 	"github.com/urfave/cli/v3"
-	"google.golang.org/protobuf/proto"
 )
 
 var cwd, _ = os.Getwd()
-
-func replaceAttr(groups []string, a slog.Attr) slog.Attr {
-	if a.Value.Kind() == slog.KindDuration {
-		a.Value = slog.StringValue(a.Value.Duration().String())
-	}
-	if source, ok := a.Value.Any().(*slog.Source); ok {
-		source.File = strings.TrimPrefix(source.File, cwd+string(os.PathSeparator))
-		source.Function = strings.TrimPrefix(source.Function, "github.com/tigorlazuardi/claw/")
-	}
-	if m, ok := a.Value.Any().(proto.Message); ok {
-		a.Value = transformProtoToLog(m)
-	}
-	return a
-}
-
-var handleOption = &slog.HandlerOptions{
-	AddSource:   true,
-	Level:       slog.LevelInfo,
-	ReplaceAttr: replaceAttr,
-}
 
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
@@ -47,18 +26,11 @@ func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
 	if loc, err := time.LoadLocation(tz); err == nil {
 		time.Local = loc
 	}
-	if prettylog.CanColor(os.Stderr) {
-		prettyHandler := prettylog.New(
-			prettylog.WithPackageName("github.com/tigorlazuardi/claw"),
-		)
-		slog.SetDefault(slog.New(prettyHandler))
-	} else {
-		logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-			AddSource:   true,
-			Level:       slog.LevelInfo,
-			ReplaceAttr: replaceAttr,
-		}))
-		slog.SetDefault(logger)
+	if err := logger.Setup(ctx); err != nil {
+		return ctx, fmt.Errorf("failed to setup logger: %w", err)
+	}
+	if err := otel.SetupTracing(ctx); err != nil {
+		return ctx, fmt.Errorf("failed to setup OpenTelemetry tracing: %w", err)
 	}
 
 	if cfg == nil {

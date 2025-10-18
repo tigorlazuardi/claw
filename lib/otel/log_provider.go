@@ -10,6 +10,14 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
+func IsLogEndpointSet() bool {
+	logEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+	if logEndpoint == "" {
+		logEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	}
+	return logEndpoint != ""
+}
+
 func CreateLogProvider(ctx context.Context) (log.LoggerProvider, error) {
 	proto := os.Getenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL")
 	if proto == "" {
