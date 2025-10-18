@@ -19,7 +19,7 @@ import (
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
 	"github.com/tigorlazuardi/claw/lib/claw/source"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
-	"github.com/tigorlazuardi/claw/lib/dblogger"
+	"github.com/tigorlazuardi/claw/lib/logger"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -112,7 +112,7 @@ func (scheduler *scheduler) getJobs(ctx context.Context) ([]model.Jobs, error) {
 		}
 		cond = AND(cond, Jobs.ID.NOT_IN(expr...))
 	}
-	ctx = dblogger.ContextWithSkipLog(ctx)
+	ctx = logger.ContextWithSkipLog(ctx)
 	err := SELECT(Jobs.AllColumns).
 		FROM(Jobs).
 		WHERE(cond).

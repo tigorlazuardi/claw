@@ -11,12 +11,12 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gabriel-vasile/mimetype v1.4.10
 	github.com/go-jet/jet/v2 v2.13.0
+	github.com/j2gg0s/otsql v0.18.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/env v1.1.0
 	github.com/knadh/koanf/providers/file v1.2.0
 	github.com/knadh/koanf/v2 v2.2.2
 	github.com/ncruces/go-sqlite3 v0.29.0
-	github.com/networkteam/go-sqllogger v0.4.0
 	github.com/olivere/vite v0.1.0
 	github.com/pressly/goose/v3 v3.25.0
 	github.com/stretchr/testify v1.11.1

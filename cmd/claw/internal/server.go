@@ -15,9 +15,9 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
-	"github.com/networkteam/go-sqllogger"
+	"github.com/j2gg0s/otsql"
 	"github.com/tigorlazuardi/claw/lib/claw"
-	"github.com/tigorlazuardi/claw/lib/dblogger"
+	"github.com/tigorlazuardi/claw/lib/logger"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/tigorlazuardi/claw/migrations"
@@ -45,10 +45,10 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	ldb := sqllogger.LoggingConnector(dblogger.DBLogger{
-		Logger: slog.Default(),
-	}, conn)
-	db := sql.OpenDB(ldb)
+	conn = otsql.WrapConnector(conn, otsql.WithHooks(
+		logger.LoggerHook{Logger: slog.Default()},
+	))
+	db := sql.OpenDB(conn)
 	defer db.Close()
 
 	abs, _ := filepath.Abs(cfg.Database.Path)
