@@ -36,5 +36,6 @@ func CreateLogProvider(ctx context.Context) (log.LoggerProvider, error) {
 		return nil, err
 	}
 	batcher := sdklog.NewBatchProcessor(exporter)
+	Shutdowns = append(Shutdowns, batcher.ForceFlush, batcher.Shutdown)
 	return sdklog.NewLoggerProvider(sdklog.WithProcessor(batcher)), nil
 }

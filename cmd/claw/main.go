@@ -29,6 +29,7 @@ func main() {
 			internal.ServerCommand(),
 		},
 		Before: internal.Before,
+		After:  internal.After,
 		Flags: []cli.Flag{
 			internal.ConfigFlag(),
 		},

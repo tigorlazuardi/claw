@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/networkteam/go-sqllogger"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	"github.com/tigorlazuardi/claw/lib/dblogger"
@@ -84,26 +85,34 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Create logging interceptor
 	loggingInterceptor := server.LoggingInterceptor(slog.Default())
+	otelInterceptor, err := otelconnect.NewInterceptor()
+	if err != nil {
+		return fmt.Errorf("failed to create OpenTelemetry interceptor: %w", err)
+	}
+	interceptors := []connect.Interceptor{
+		otelInterceptor,
+		loggingInterceptor,
+	}
 
 	// Register all service handlers with interceptor
 	sourcePath, sourceHandlerHTTP := clawv1connect.NewSourceServiceHandler(sourceHandler,
-		connect.WithInterceptors(loggingInterceptor))
+		connect.WithInterceptors(interceptors...))
 	mux.Handle(sourcePath, sourceHandlerHTTP)
 
 	devicePath, deviceHandlerHTTP := clawv1connect.NewDeviceServiceHandler(deviceHandler,
-		connect.WithInterceptors(loggingInterceptor))
+		connect.WithInterceptors(interceptors...))
 	mux.Handle(devicePath, deviceHandlerHTTP)
 
 	imagePath, imageHandlerHTTP := clawv1connect.NewImageServiceHandler(imageHandler,
-		connect.WithInterceptors(loggingInterceptor))
+		connect.WithInterceptors(interceptors...))
 	mux.Handle(imagePath, imageHandlerHTTP)
 
 	tagPath, tagHandlerHTTP := clawv1connect.NewTagServiceHandler(tagHandler,
-		connect.WithInterceptors(loggingInterceptor))
+		connect.WithInterceptors(interceptors...))
 	mux.Handle(tagPath, tagHandlerHTTP)
 
 	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler,
-		connect.WithInterceptors(loggingInterceptor))
+		connect.WithInterceptors(interceptors...))
 	mux.Handle(jobPath, jobHandlerHTTP)
 
 	mux.Handle("/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

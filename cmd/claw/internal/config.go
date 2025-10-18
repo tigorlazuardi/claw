@@ -14,6 +14,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 	"github.com/tigorlazuardi/claw/lib/claw/config"
+	"github.com/urfave/cli/v3"
 )
 
 var cfg *CLIConfig
@@ -118,4 +119,36 @@ func (cfg *CLIConfig) Unwatch() error {
 		return cfg.FileProvider.Unwatch()
 	}
 	return nil
+}
+
+// ConfigFlag returns a CLI flag for specifying the configuration file path.
+func ConfigFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:     "config",
+		Aliases:  []string{"c"},
+		Required: false,
+		Usage:    "Path to configuration file",
+		Sources: cli.NewValueSourceChain(
+			cli.EnvVar("CLAW_CONFIG"),
+		),
+		Value: func() string {
+			return filepath.Join(xdg.ConfigHome, "claw", "config.yaml")
+		}(),
+		Validator: func(s string) error {
+			if s == "" {
+				return errors.New("config path cannot be empty")
+			}
+			info, err := os.Stat(s)
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("failed to stat config file: %w", err)
+			}
+			if info.IsDir() {
+				return fmt.Errorf("config path %q is a directory", s)
+			}
+			return nil
+		},
+	}
 }

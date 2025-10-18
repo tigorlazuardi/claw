@@ -2,6 +2,7 @@ package otel
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -83,5 +84,7 @@ func StartSpan(ctx context.Context) (context.Context, trace.Span) {
 		semconv.CodeFilePath(frame.File),
 		semconv.CodeLineNumber(frame.Line),
 	)
-	return tracer.Start(ctx, fnName, opts)
+	ctx, span := tracer.Start(ctx, fnName, opts)
+	fmt.Println(span.SpanContext().TraceID())
+	return ctx, span
 }

@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250912141014-52f32327d4b0.1
 	connectrpc.com/connect v1.18.1
+	connectrpc.com/otelconnect v0.8.0
 	github.com/adhocore/gronx v1.19.6
 	github.com/adrg/xdg v0.5.3
 	github.com/dustin/go-humanize v1.0.1

@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,7 +26,8 @@ func Setup(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		handler := otelslog.NewHandler("github.com/tigorlazuardi/claw", otelslog.WithLoggerProvider(provider))
+		global.SetLoggerProvider(provider)
+		handler := otelslog.NewHandler("github.com/tigorlazuardi/claw")
 		slog.SetDefault(slog.New(&OtelHandler{Handler: handler}))
 		return nil
 	}

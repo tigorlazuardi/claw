@@ -8,6 +8,7 @@ import (
 	"io/fs"
 
 	"github.com/pressly/goose/v3"
+	"github.com/tigorlazuardi/claw/lib/otel"
 )
 
 //go:embed *.sql
@@ -56,6 +57,9 @@ func WithFS(filesystem fs.FS) MigrateOption {
 //	err := Migrate(ctx, db, WithReset(true)) // WARNING: DATA LOSS
 //	err := Migrate(ctx, db, WithFS(customFS))
 func Migrate(ctx context.Context, db *sql.DB, options ...MigrateOption) error {
+	ctx, span := otel.StartSpan(ctx)
+	defer span.End()
+
 	config := &MigrateConfig{
 		Reset: false,
 		FS:    embedMigrations,
@@ -81,7 +85,7 @@ func Migrate(ctx context.Context, db *sql.DB, options ...MigrateOption) error {
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("failed to check if goose_db_version table exists: %w", err)
 		}
-		
+
 		// Only reset if the table exists (database has been initialized)
 		if tableName == "goose_db_version" {
 			if err := goose.ResetContext(ctx, db, "."); err != nil {
@@ -97,3 +101,4 @@ func Migrate(ctx context.Context, db *sql.DB, options ...MigrateOption) error {
 
 	return nil
 }
+
