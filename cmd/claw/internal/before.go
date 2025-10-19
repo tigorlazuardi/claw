@@ -10,12 +10,21 @@ import (
 	"github.com/tigorlazuardi/claw/lib/logger"
 	"github.com/tigorlazuardi/claw/lib/otel"
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var cwd, _ = os.Getwd()
 
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
+	for _, attr := range []attribute.KeyValue{
+		semconv.ServiceName("claw"),
+		semconv.ServiceNamespace("claw"),
+	} {
+		otel.SetResourceAttr(attr)
+	}
+
 	tz := os.Getenv("TZ")
 	if tz == "" {
 		tz = "Asia/Jakarta"

@@ -1,26 +1,44 @@
 package otel
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-// DefaultResource creates a default OpenTelemetry resource with sensible defaults.
-// It sets:
-//   - Service name: "Claw"
-//   - Service version: "0.0.0"
-//   - Environment: value of CLAW_ENVIRONMENT env var, or "local" if not set
-//
-// The resource is merged with the default resource provided by the SDK.
-func DefaultResource() (*resource.Resource, error) {
-	return resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName("Claw"),
-			semconv.ServiceVersion("0.0.0"),
-			semconv.DeploymentEnvironment(getEnvironment()),
-		),
+var Resource *resource.Resource
+
+func init() {
+	res, err := resource.New(context.Background(),
+		resource.WithFromEnv(),
+		resource.WithHost(),
+		resource.WithOS(),
 	)
+	if err != nil {
+		Resource = resource.Empty()
+		otel.Handle(err)
+	}
+	Resource, err = resource.Merge(resource.Default(), res)
+	if err != nil {
+		Resource = resource.Default()
+		otel.Handle(err)
+	}
 }
 
+// SetResourceAttr sets a resource attribute if it is not already set.
+func SetResourceAttr(attr attribute.KeyValue) {
+	var found bool
+	iter := Resource.Iter()
+	for iter.Next() {
+		if iter.Attribute().Key == attr.Key {
+			found = true
+			break
+		}
+	}
+	if !found {
+		newRes, _ := resource.New(context.Background(), resource.WithAttributes(attr))
+		Resource, _ = resource.Merge(Resource, newRes)
+	}
+}

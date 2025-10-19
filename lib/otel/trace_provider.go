@@ -54,7 +54,10 @@ func CreateTraceProvider(ctx context.Context) (trace.TracerProvider, error) {
 	}
 	batcher := sdktrace.NewBatchSpanProcessor(exporter)
 	Shutdowns = append(Shutdowns, batcher.ForceFlush, batcher.Shutdown)
-	return sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher)), nil
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(batcher),
+		sdktrace.WithResource(Resource),
+	), nil
 }
 
 // CreateNoopTraceProvider returns a a tracer provider that does not export any traces,
