@@ -8,6 +8,7 @@ import (
 	"github.com/adhocore/gronx"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
+	"github.com/tigorlazuardi/claw/lib/otel"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -34,6 +35,8 @@ func (h *SourceHandler) CreateSource(ctx context.Context, req *connect.Request[c
 
 // GetSource handles source retrieval requests
 func (h *SourceHandler) GetSource(ctx context.Context, req *connect.Request[clawv1.GetSourceRequest]) (*connect.Response[clawv1.GetSourceResponse], error) {
+	ctx, span := otel.Start(ctx)
+	defer span.End()
 	registerEndpointInfo(ctx)
 	resp, err := h.service.GetSource(ctx, req.Msg)
 	if err != nil {
@@ -64,6 +67,8 @@ func (h *SourceHandler) DeleteSource(ctx context.Context, req *connect.Request[c
 
 // ListSources handles source listing requests
 func (h *SourceHandler) ListSources(ctx context.Context, req *connect.Request[clawv1.ListSourcesRequest]) (*connect.Response[clawv1.ListSourcesResponse], error) {
+	ctx, span := otel.Start(ctx)
+	defer span.End()
 	registerEndpointInfo(ctx)
 	resp, err := h.service.ListSources(ctx, req.Msg)
 	if err != nil {

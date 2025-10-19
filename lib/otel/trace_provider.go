@@ -69,7 +69,7 @@ func CreateNoopTraceProvider() trace.TracerProvider {
 
 var tracer = otel.Tracer("github.com/tigorlazuardi/claw/lib/otel")
 
-func StartSpan(ctx context.Context) (context.Context, trace.Span) {
+func Start(ctx context.Context, opt ...StartOptionFunc) (context.Context, trace.Span) {
 	pc := make([]uintptr, 1)
 	runtime.Callers(2, pc)
 	frame, _ := runtime.CallersFrames(pc).Next()
@@ -78,11 +78,37 @@ func StartSpan(ctx context.Context) (context.Context, trace.Span) {
 		parts := strings.Split(frame.Function, "/")
 		fnName = parts[len(parts)-1]
 	}
-	opts := trace.WithAttributes(
-		semconv.CodeFunctionName(frame.Function),
-		semconv.CodeFilePath(frame.File),
-		semconv.CodeLineNumber(frame.Line),
-	)
-	ctx, span := tracer.Start(ctx, fnName, opts)
-	return ctx, span
+	o := &StartOption{
+		Name: fnName,
+	}
+	for _, fn := range opt {
+		fn(o)
+	}
+	opts := append([]trace.SpanStartOption{
+		trace.WithAttributes(
+			semconv.CodeFunctionName(frame.Function),
+			semconv.CodeFilePath(frame.File),
+			semconv.CodeLineNumber(frame.Line),
+		),
+	}, o.SpanStartOptions...)
+	return tracer.Start(ctx, o.Name, opts...)
+}
+
+type StartOption struct {
+	Name             string
+	SpanStartOptions []trace.SpanStartOption
+}
+
+type StartOptionFunc func(*StartOption)
+
+func WithSpanName(name string) StartOptionFunc {
+	return func(opt *StartOption) {
+		opt.Name = name
+	}
+}
+
+func WithSpanStartOptions(spanOpts ...trace.SpanStartOption) StartOptionFunc {
+	return func(opt *StartOption) {
+		opt.SpanStartOptions = append(opt.SpanStartOptions, spanOpts...)
+	}
 }

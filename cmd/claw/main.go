@@ -7,11 +7,17 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"github.com/tigorlazuardi/claw/cmd/claw/internal"
 	"github.com/urfave/cli/v3"
 )
 
+// Change the version file inside CI/CD pipeline during build time using go build -ldflags "-X main.Version=your_version"
+var Version = "v0.0.0"
+
 func main() {
+	godotenv.Load()
+
 	// Create context that cancels on interrupt/termination signals
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	go func() {
@@ -24,7 +30,7 @@ func main() {
 	app := &cli.Command{
 		Name:    "claw",
 		Usage:   "A downloader and image collector from various sources",
-		Version: "1.0.0",
+		Version: Version,
 		Commands: []*cli.Command{
 			internal.ServerCommand(),
 		},

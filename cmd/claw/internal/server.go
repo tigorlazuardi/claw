@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"net"
@@ -15,13 +14,18 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
+	"github.com/XSAM/otelsql"
 	"github.com/j2gg0s/otsql"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tigorlazuardi/claw/lib/claw"
 	"github.com/tigorlazuardi/claw/lib/logger"
+	"github.com/tigorlazuardi/claw/lib/otel"
 	"github.com/tigorlazuardi/claw/lib/server"
 	"github.com/tigorlazuardi/claw/lib/server/gen/claw/v1/clawv1connect"
 	"github.com/tigorlazuardi/claw/migrations"
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -29,6 +33,10 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
+
+// Change the version file inside CI/CD pipeline during build time
+
+var Version string = "v0.0.0"
 
 // ServerCommand creates the server CLI command
 func ServerCommand() *cli.Command {
@@ -45,11 +53,26 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	conn = otsql.WrapConnector(conn, otsql.WithHooks(
-		logger.LoggerHook{Logger: slog.Default()},
-	))
-	db := sql.OpenDB(conn)
+	conn = otsql.WrapConnector(conn,
+		otsql.WithHooks(
+			logger.LoggerHook{Logger: slog.Default()},
+			&otel.DBClientDurationMetricHook{Address: cfg.Database.Path},
+		),
+		otsql.WithDatabaase("claw"),
+	)
+	dbAttrs := []attribute.KeyValue{
+		semconv.DBSystemSqlite,
+		semconv.ServerAddress("file://" + cfg.Database.Path),
+		semconv.DBNamespace("claw"),
+	}
+	db := otelsql.OpenDB(conn,
+		otelsql.WithAttributes(dbAttrs...),
+	)
 	defer db.Close()
+
+	if err := otelsql.RegisterDBStatsMetrics(db); err != nil {
+		return fmt.Errorf("failed to register database metrics: %w", err)
+	}
 
 	abs, _ := filepath.Abs(cfg.Database.Path)
 	slog.Info("Database connected", "path", abs)
@@ -114,6 +137,11 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	jobPath, jobHandlerHTTP := clawv1connect.NewJobServiceHandler(jobHandler,
 		connect.WithInterceptors(interceptors...))
 	mux.Handle(jobPath, jobHandlerHTTP)
+
+	if otel.PrometheusExporter != nil {
+		slog.Info("Prometheus metrics exporter is enabled at /metrics")
+		mux.Handle("/metrics", promhttp.Handler())
+	}
 
 	mux.Handle("/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

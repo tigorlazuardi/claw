@@ -20,6 +20,9 @@ import (
 	"github.com/tigorlazuardi/claw/lib/claw/source"
 	"github.com/tigorlazuardi/claw/lib/claw/types"
 	"github.com/tigorlazuardi/claw/lib/logger"
+	"github.com/tigorlazuardi/claw/lib/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -103,6 +106,9 @@ func (scheduler *scheduler) startPolling(ctx context.Context) {
 }
 
 func (scheduler *scheduler) getJobs(ctx context.Context) ([]model.Jobs, error) {
+	ctx, span := otel.Start(ctx)
+	defer span.End()
+
 	var jobs []model.Jobs
 	cond := Jobs.FinishedAt.IS_NULL()
 	if runningIds := scheduler.tracker.List(); len(runningIds) > 0 {
@@ -113,6 +119,7 @@ func (scheduler *scheduler) getJobs(ctx context.Context) ([]model.Jobs, error) {
 		cond = AND(cond, Jobs.ID.NOT_IN(expr...))
 	}
 	ctx = logger.ContextWithSkipLog(ctx)
+	ctx = otel.ContextWithDatabaseCaller(ctx, otel.CurrentCaller())
 	err := SELECT(Jobs.AllColumns).
 		FROM(Jobs).
 		WHERE(cond).
@@ -172,6 +179,7 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 		src model.Sources
 		err error
 	)
+	ctx = otel.ContextWithDatabaseCaller(ctx, otel.CurrentCaller())
 	err = SELECT(Sources.AllColumns).
 		WHERE(Sources.ID.EQ(Int64(job))).
 		QueryContext(ctx, scheduler.claw.db, &src)
@@ -179,6 +187,14 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 		scheduler.logger.ErrorContext(ctx, "failed to get source for job", "job_id", job, "error", err)
 		return
 	}
+	ctx, span := otel.Start(ctx, otel.WithSpanStartOptions(trace.WithAttributes(
+		attribute.Int64("job.source.id", job),
+		attribute.String("job.source.name", src.Name),
+		attribute.String("job.source.display_name", src.DisplayName),
+		attribute.String("job.source.parameter", src.Parameter),
+		attribute.Int64("job.source.countback", src.Countback),
+	)))
+	defer span.End()
 
 	backend, ok := scheduler.backends[src.Name]
 	if !ok {
@@ -257,6 +273,8 @@ func (scheduler *scheduler) executeJob(ctx context.Context, job int64) {
 }
 
 func (scheduler *scheduler) findDevicesToAssign(ctx context.Context, image source.Image) ([]model.Devices, error) {
+	ctx, span := otel.Start(ctx)
+	defer span.End()
 	imageRatio := float64(image.Width) / float64(image.Height)
 	cond := Devices.IsDisabled.EQ(Int(0)).
 		AND(
@@ -289,6 +307,7 @@ func (scheduler *scheduler) findDevicesToAssign(ctx context.Context, image sourc
 		cond = AND(cond, Devices.NsfwMode.NOT_EQ(Int(3)))
 	}
 	var devices []model.Devices
+	ctx = otel.ContextWithDatabaseCaller(ctx, otel.CurrentCaller())
 	err := SELECT(Devices.AllColumns).
 		FROM(Devices).
 		WHERE(cond).
@@ -314,6 +333,9 @@ func (scheduler *scheduler) updateJobStatus(ctx context.Context, job int64, stat
 	if errors.Is(attr.err, context.Canceled) || errors.Is(attr.err, context.DeadlineExceeded) {
 		return
 	}
+	ctx, span := otel.Start(ctx)
+	defer span.End()
+
 	value := model.Jobs{}
 	col := ColumnList{}
 	if attr.err != nil {
@@ -332,6 +354,7 @@ func (scheduler *scheduler) updateJobStatus(ctx context.Context, job int64, stat
 		value.RunAt = attr.runAt
 		col = append(col, Jobs.RunAt)
 	}
+	ctx = otel.ContextWithDatabaseCaller(ctx, otel.CurrentCaller())
 	_, err := Jobs.
 		UPDATE(col).
 		MODEL(value).

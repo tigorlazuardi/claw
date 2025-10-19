@@ -8,6 +8,7 @@ import (
 	"github.com/tigorlazuardi/claw/lib/claw/gen/jet/model"
 	. "github.com/tigorlazuardi/claw/lib/claw/gen/jet/table"
 	clawv1 "github.com/tigorlazuardi/claw/lib/claw/gen/proto/claw/v1"
+	"github.com/tigorlazuardi/claw/lib/otel"
 )
 
 // ListSources lists sources with optional filtering and cursor-based pagination
@@ -84,6 +85,7 @@ func (s *Claw) ListSources(ctx context.Context, req *clawv1.ListSourcesRequest) 
 		model.Sources
 		Schedules []model.Schedules
 	}
+	ctx = otel.ContextWithDatabaseCaller(ctx, otel.CurrentCaller())
 	err := query.QueryContext(ctx, s.db, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sources: %w", err)

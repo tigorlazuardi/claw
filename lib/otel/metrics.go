@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,7 +27,9 @@ func GetMetricsEndpoint() string {
 }
 
 func SetupMetrics(ctx context.Context) error {
-	opts := []sdkmetric.Option{}
+	opts := []sdkmetric.Option{
+		sdkmetric.WithResource(Resource),
+	}
 	if endpoint := GetMetricsEndpoint(); endpoint != "" {
 		reader, err := CreateMetricsReader(ctx)
 		if err != nil {
@@ -36,8 +39,10 @@ func SetupMetrics(ctx context.Context) error {
 		}
 	}
 
-	if b, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv("CLAW_PROMETHEUS_EXPOSE"))); b {
-		prom, err := prometheus.New(prometheus.WithResourceAsConstantLabels(func(kv attribute.KeyValue) bool { return true }))
+	if b, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv("CLAW_PROMETHEUS_ENABLE"))); b {
+		prom, err := prometheus.New(
+			prometheus.WithResourceAsConstantLabels(func(kv attribute.KeyValue) bool { return true }),
+		)
 		if err != nil {
 			otel.Handle(err)
 		} else {
@@ -70,7 +75,7 @@ func CreateMetricsReader(ctx context.Context) (sdkmetric.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	reader := sdkmetric.NewPeriodicReader(exporter)
+	reader := sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(time.Second*5))
 	Shutdowns = append(Shutdowns, reader.ForceFlush, reader.Shutdown)
 	return reader, nil
 }

@@ -18,6 +18,7 @@ var cwd, _ = os.Getwd()
 
 // Before is a CLI hook that runs before any command. It initializes and watches the configuration file.
 func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
+	otel.SetResourceAttr(semconv.ServiceVersion(c.Root().Version))
 	for _, attr := range []attribute.KeyValue{
 		semconv.ServiceName("claw"),
 		semconv.ServiceNamespace("claw"),
@@ -37,6 +38,9 @@ func Before(ctx context.Context, c *cli.Command) (context.Context, error) {
 	}
 	if err := otel.SetupTracing(ctx); err != nil {
 		return ctx, fmt.Errorf("failed to setup OpenTelemetry tracing: %w", err)
+	}
+	if err := otel.SetupMetrics(ctx); err != nil {
+		return ctx, fmt.Errorf("failed to setup OpenTelemetry metrics: %w", err)
 	}
 
 	if cfg == nil {

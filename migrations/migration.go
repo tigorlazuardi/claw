@@ -57,7 +57,7 @@ func WithFS(filesystem fs.FS) MigrateOption {
 //	err := Migrate(ctx, db, WithReset(true)) // WARNING: DATA LOSS
 //	err := Migrate(ctx, db, WithFS(customFS))
 func Migrate(ctx context.Context, db *sql.DB, options ...MigrateOption) error {
-	ctx, span := otel.StartSpan(ctx)
+	ctx, span := otel.Start(ctx)
 	defer span.End()
 
 	config := &MigrateConfig{
@@ -101,4 +101,3 @@ func Migrate(ctx context.Context, db *sql.DB, options ...MigrateOption) error {
 
 	return nil
 }
-

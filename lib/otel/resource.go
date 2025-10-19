@@ -15,6 +15,7 @@ func init() {
 		resource.WithFromEnv(),
 		resource.WithHost(),
 		resource.WithOS(),
+		resource.WithContainer(),
 	)
 	if err != nil {
 		Resource = resource.Empty()

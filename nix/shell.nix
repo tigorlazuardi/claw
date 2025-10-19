@@ -51,6 +51,8 @@
           ];
           shellHook = ''
             export PROJECT_DIR="$(git rev-parse --show-toplevel)"
+            export CLAW_PROMETHEUS_ENABLE=true
+            export OTEL_RESOURCE_ATTRIBUTES="service.name=http,service.namespace=claw,deployment.environment.name=local,deployment.environment=local"
 
             (cd "$PROJECT_DIR/webui" && npm install)
 
