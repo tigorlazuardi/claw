@@ -7,6 +7,8 @@
   import IsMobile from "./store/IsMobile.svelte";
 
   const queryClient = new QueryClient();
+
+  console.log(window.Otel)
 </script>
 
 <IsMobile>
