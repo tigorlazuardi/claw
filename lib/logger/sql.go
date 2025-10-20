@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -37,7 +38,7 @@ func (lo LoggerHook) After(ctx context.Context, evt *otsql.Event) {
 	end := time.Now()
 	dur := end.Sub(evt.BeginAt)
 	if evt.Err != nil {
-		if strings.HasPrefix(evt.Err.Error(), "driver: skip fast-path;") {
+		if errors.Is(evt.Err, driver.ErrSkip) {
 			return
 		}
 		lvl = slog.LevelError

@@ -67,6 +67,7 @@ func runServer(ctx context.Context, cmd *cli.Command) error {
 	}
 	db := otelsql.OpenDB(conn,
 		otelsql.WithAttributes(dbAttrs...),
+		otelsql.WithDisableSkipErrMeasurement(true),
 	)
 	defer db.Close()
 
