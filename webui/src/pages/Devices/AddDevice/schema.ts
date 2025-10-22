@@ -1,6 +1,7 @@
 import { NSFWMode } from "#/gen/claw/v1/nsfw_pb";
 import Type, { type Static } from "typebox";
 import type { UiSchema } from "@sjsf/form";
+import "@sjsf/form/fields/extra-fields/enum-include";
 
 export const CreateDeviceSchema = Type.Object({
   slug: Type.String({
@@ -30,6 +31,7 @@ export const CreateDeviceSchema = Type.Object({
   imageMaxFilesize: Type.Optional(Type.Integer({ minimum: 0 })),
   nsfw: Type.Enum(Object.keys(NSFWMode), {
     title: "NSFW Mode",
+    description: "NSFW handling mode for this device",
   }),
   isDisabled: Type.Optional(
     Type.Boolean({
@@ -44,7 +46,14 @@ export const CreateDeviceSchema = Type.Object({
 export const CreateDeviceUiSchema: UiSchema = {
   nsfw: {
     "ui:components": {
-      stringField: "anyOfField",
+      // TODO: Move to use custom Radio using bits-ui
+      stringField: "enumField",
+    },
+    "ui:options": {
+      enumNames: Object.keys(NSFWMode),
+      text: {
+        autocomplete: "name",
+      },
     },
   },
 };
