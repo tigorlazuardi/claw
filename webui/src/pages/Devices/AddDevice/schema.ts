@@ -2,6 +2,7 @@ import { NSFWMode } from "#/gen/claw/v1/nsfw_pb";
 import Type, { type Static } from "typebox";
 import type { UiSchema } from "@sjsf/form";
 import "@sjsf/form/fields/extra-fields/enum-include";
+import SelectNSFWMode from "./SelectNSFWMode.svelte";
 
 export const CreateDeviceSchema = Type.Object({
   slug: Type.String({
@@ -47,10 +48,9 @@ export const CreateDeviceUiSchema: UiSchema = {
   nsfw: {
     "ui:components": {
       // TODO: Move to use custom Radio using bits-ui
-      stringField: "enumField",
+      stringField: SelectNSFWMode,
     },
     "ui:options": {
-      enumNames: Object.keys(NSFWMode),
       text: {
         autocomplete: "name",
       },
