@@ -49,10 +49,14 @@
               systemctl --user stop claw-dev.scope || echo "No claw-dev scope running"
             '')
           ];
+          env = {
+            CLAW_SERVER__WEBUI__DEV_MODE = true;
+            CLAW_PROMETHEUS_ENABLE = true;
+            OTEL_RESOURCE_ATTRIBUTES = "service.name=http,service.namespace=claw,deployment.environment.name=local,deployment.environment=local";
+            GOROOT = "${pkgs.go_1_25}/share/go";
+          };
           shellHook = ''
             export PROJECT_DIR="$(git rev-parse --show-toplevel)"
-            export CLAW_PROMETHEUS_ENABLE=true
-            export OTEL_RESOURCE_ATTRIBUTES="service.name=http,service.namespace=claw,deployment.environment.name=local,deployment.environment=local"
 
             (cd "$PROJECT_DIR/webui" && npm install)
 
@@ -82,10 +86,8 @@
             mkdir -p artifacts
 
             export GOOSE_DBSTRING="$(pwd)/artifacts/migrate.db"
-            export GOROOT="${pkgs.go_1_25}/share/go"
             export CLAW_DATABASE__PATH="$(pwd)/artifacts/claw.db"
             export CLAW_SERVER__WEBUI__PATH="$(pwd)/cmd/claw/internal/webui"
-            export CLAW_SERVER__WEBUI__DEV_MODE=true
             echo "GOOSE_DBSTRING      set to: $GOOSE_DBSTRING"
             echo "CLAW_DATABASE__PATH set to: $CLAW_DATABASE__PATH"
 
